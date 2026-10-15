@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run.ps1",
     "portable": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-portable.ps1",
     "tauri": "tauri"
   },

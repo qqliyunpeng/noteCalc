@@ -13,10 +13,17 @@
 
 ```bash
 pnpm install
-pnpm tauri dev                 # 开发模式（自动拉起 Vite，端口 1420）
-pnpm tauri build               # 发布构建（NSIS 安装包，产物在 src-tauri/target/release/bundle）
+pnpm start                     # 启动 release 版（产物不存在会自动构建）
+pnpm tauri dev                 # 开发模式（自动拉起 Vite，端口 1420，改代码即时生效）
+pnpm tauri build               # 发布构建（MSI / NSIS 安装包，产物在 src-tauri/target/release/bundle）
 pnpm tauri build --no-bundle   # 只出可执行文件，跳过安装包封装
 ```
+
+根目录的 `run.bat` 是给双击用的包装（内部还是调 `scripts\run.ps1`），参数直接透传：`run.bat`、
+`run.bat -Check`、`run.bat -Rebuild`。
+
+`scripts\run.ps1` 就是 `pnpm start` 背后的脚本，另有三个开关：`-Rebuild`（先重新构建再启动）、
+`-Dev`（等价于 `pnpm tauri dev`）、`-Check`（只跑计算引擎自检，不开窗口，退出码 0 表示 30 项全过）。
 
 只调界面时不启动 Rust 也可以：
 
