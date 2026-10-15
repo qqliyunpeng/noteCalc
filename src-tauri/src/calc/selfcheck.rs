@@ -2,7 +2,7 @@
 //!
 //! The repository's `cargo test` target cannot link on this machine (MinGW
 //! toolchain quirk, see README), so the same assertions run from the app binary
-//! itself: `notebook-calc.exe --check`.
+//! itself: `notecalc.exe --check`.
 
 use std::collections::HashMap;
 

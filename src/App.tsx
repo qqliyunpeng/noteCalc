@@ -275,7 +275,7 @@ export default function App() {
         tabsRef.current = [tab];
         setTabs([tab]);
         setActiveId(tab.id);
-        showFlash("欢迎使用离线计算笔记 · 这是示例笔记，可直接修改或另存");
+        showFlash("欢迎使用 noteCalc · 这是示例笔记，可直接修改或另存");
       }
       setReady(true);
     })();
@@ -350,7 +350,7 @@ export default function App() {
   const name = documentName(activeTab);
   const dirty = isDirty(activeTab);
   useEffect(() => {
-    document.title = `${dirty ? "*" : ""}${name} - 离线计算笔记`;
+    document.title = `${dirty ? "*" : ""}${name} - noteCalc`;
   }, [dirty, name]);
 
   /* ------------------------------ documents ------------------------------ */
@@ -796,7 +796,7 @@ export default function App() {
         onDismiss={() => setModal(null)}
         buttons={[{ label: "确定", primary: true, onClick: () => setModal(null) }]}
       >
-        <p>离线计算笔记 v1.0</p>
+        <p>{`noteCalc v${__APP_VERSION__}`}</p>
         <p>纯本地运行，不上传笔记内容。</p>
         <p>基于 Tauri 2 与 Rust 计算引擎；交互与结果展示参考 NoteCalc。</p>
       </Modal>

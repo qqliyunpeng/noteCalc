@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "离线计算笔记主窗口所需的窗口控制权限（文件对话框与文件读写都在 Rust 侧完成，无需额外权限）",
+  "description": "noteCalc 主窗口所需的窗口控制权限（文件对话框与文件读写都在 Rust 侧完成，无需额外权限）",
   "windows": ["main"],
   "permissions": [
     "core:default",

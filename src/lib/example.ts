@@ -1,5 +1,5 @@
 /** Welcome document, ported verbatim from `EXAMPLE_CONTENT` in calculator_core.py. */
-export const EXAMPLE_CONTENT = `# 欢迎使用离线计算笔记
+export const EXAMPLE_CONTENT = `# 欢迎使用 noteCalc
 
 // 每行输入一个表达式，结果会实时显示在右侧。
 // 支持中文变量、百分比、数学函数、单位换算和等式校验。

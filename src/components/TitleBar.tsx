@@ -42,7 +42,7 @@ export function TitleBar({ documentName, dirty, path, preview, onRequestClose }:
           <Mark size={17} />
         </span>
         <span className="name" {...drag}>
-          离线计算笔记
+          noteCalc
         </span>
         <span className="doc" {...drag} title={path ?? "未保存文件"}>
           {dirty ? <i className="dirty-dot" {...drag} /> : null}

@@ -72,7 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v__VERSION__
-          releaseName: "离线计算笔记 v__VERSION__"
+          releaseName: "noteCalc v__VERSION__"
           releaseBody: |
             Windows：`.msi`（需要管理员）与 `-setup.exe`（当前用户，无需管理员）
             macOS：`.dmg`（Apple Silicon 与 Intel 各一份，未签名）
@@ -85,5 +85,5 @@ jobs:
 
       - name: 引擎自检（Windows 发布二进制）
         if: matrix.platform == 'windows-latest'
-        run: ./src-tauri/target/release/notebook-calc.exe --check
+        run: ./src-tauri/target/release/notecalc.exe --check
 

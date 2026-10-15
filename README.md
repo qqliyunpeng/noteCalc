@@ -1,4 +1,4 @@
-# 离线计算笔记 · Tauri
+# noteCalc · Tauri
 
 像写笔记一样进行计算，数据只保存在本机。
 
@@ -7,7 +7,7 @@
 计算引擎则整个搬到了 Rust，行号、高亮、徽标对齐等排版细节都按原版行为对齐。
 
 > **参考说明：** 原始交互思路参考在线工具 [NoteCalc](https://tsfullstack.heartstack.space/noteCalc)，
-> 本项目是独立开发的本地离线版本，与 NoteCalc 官方无关，数据仅保存在本机。
+> 应用名沿用仓库名 `noteCalc`；本项目是独立开发的本地离线实现，与该在线工具的官方无关，数据仅保存在本机。
 
 ## 运行
 
@@ -29,18 +29,19 @@ pnpm dev                       # 浏览器打开 http://localhost:1420
 
 ## 分发（拷到别的机器）
 
-`pnpm tauri build` 会产出两份可直接分发的产物：
+`pnpm tauri build` 会产出三份可直接分发的产物（Windows）：
 
 | 产物 | 路径 | 说明 |
 | --- | --- | --- |
-| NSIS 安装包 | `src-tauri\target\release\bundle\nsis\离线计算笔记_1.0.0_x64-setup.exe` | 按当前用户安装，不需要管理员，自带卸载程序 |
-| 便携包 | `src-tauri\target\release\bundle\portable\离线计算笔记_1.0.0_x64-portable.zip` | 解压即用，含 `notebook-calc.exe` 与 `WebView2Loader.dll` |
+| MSI 安装包 | `src-tauri\target\release\bundle\msi\noteCalc_0.1.0_x64_zh-CN.msi` | 按机器安装，需要管理员权限，适合批量部署 |
+| NSIS 安装包 | `src-tauri\target\release\bundle\nsis\noteCalc_0.1.0_x64-setup.exe` | 按当前用户安装，不需要管理员，自带卸载程序 |
+| 便携包 | `src-tauri\target\release\bundle\portable\noteCalc_0.1.0_x64-portable.zip` | 解压即用，含 `notecalc.exe` 与 `WebView2Loader.dll` |
 
-> MSI 的产品名是中文，而 WiX 默认代码页是 1252，装不下中文会报 `LGHT0311`；因此
-> `bundle.windows.wix.language` 固定为 `zh-CN`（代码页 936，语言 ID 2052）。改语言前先确认
-> 该语言的代码页能覆盖产品名里的字符。
+> `bundle.windows.wix.language` 固定为 `zh-CN`（代码页 936，语言 ID 2052），安装向导因此是中文的。
+> 现在产品名是 ASCII 的 `noteCalc`，改回默认代码页 1252 也不会报 `LGHT0311`；但如果以后把产品名
+> 改回中文，必须确认所选语言的代码页能覆盖产品名里的字符。
 
-便携解压后两个文件必须放在同一目录：`notebook-calc.exe` 是延迟导入 `WebView2Loader.dll`，
+便携解压后两个文件必须放在同一目录：`notecalc.exe` 是延迟导入 `WebView2Loader.dll`，
 缺了它进程能起来，但界面是空白的。安装包已经包含这两个文件。
 
 目标机器要求：Windows 10/11 x64，以及 **WebView2 运行时**（Win11 和装了新版 Edge 的 Win10
@@ -60,7 +61,7 @@ pnpm portable                  # 等价于 scripts\make-portable.ps1
 
 `.github/workflows/release.yml` 一次跑出三个平台的安装包。触发方式二选一：
 
-- 打 tag 推送：`git tag v1.0.0 && git push origin v1.0.0`
+- 打 tag 推送：`git tag v0.1.0 && git push origin v0.1.0`
 - 在 GitHub 的 Actions 页面手动 Run workflow（`workflow_dispatch`）
 
 矩阵里四个任务并行：
@@ -76,9 +77,9 @@ pnpm portable                  # 等价于 scripts\make-portable.ps1
 
 几点注意事项：
 
-- tag 名要与 `src-tauri/tauri.conf.json` 的 `version` 对应（`v__VERSION__`），当前是 `v1.0.0`。
+- tag 名要与 `src-tauri/tauri.conf.json` 的 `version` 对应（`v__VERSION__`），当前是 `v0.1.0`。
 - 首次运行会下载 WiX / NSIS 打包工具，Windows 任务会慢几分钟，属正常现象。
-- macOS 产物未签名、未公证：用户首次打开要右键「打开」，或执行 `xattr -cr /Applications/离线计算笔记.app`。
+- macOS 产物未签名、未公证：用户首次打开要右键「打开」，或执行 `xattr -cr /Applications/noteCalc.app`。
   要去掉这一步得配 Apple 开发者证书（`APPLE_CERTIFICATE`、`APPLE_SIGNING_IDENTITY` 等 secrets）。
 - Windows 两种格式的区别：`.msi` 是 perMachine（需要管理员），`.exe` 按当前用户安装（不需要）。
 - Linux 只出 `deb` 与 `AppImage`；`rpm` 需要 runner 另装 `rpmbuild`，这里显式排除了。
@@ -97,7 +98,7 @@ pnpm tauri build --target aarch64-apple-darwin --bundles app,dmg     # macOS
 计算引擎的验收用例逐条对照 Python 版的 `test_calculator_core.py`：
 
 ```powershell
-src-tauri\target\debug\notebook-calc.exe --check
+src-tauri\target\debug\notecalc.exe --check
 ```
 
 会打印 30 项结果并以退出码表示成败。之所以不用 `cargo test`：本机 MinGW 工具链无法链接

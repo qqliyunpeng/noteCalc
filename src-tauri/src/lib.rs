@@ -1,4 +1,4 @@
-//! 离线计算笔记 — Tauri backend.
+//! noteCalc — Tauri backend.
 //!
 //! The whole calculator lives in Rust (`calc`), so the webview only renders
 //! what the engine produces. File dialogs and session storage are handled here

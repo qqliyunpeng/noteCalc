@@ -1,12 +1,12 @@
 [package]
-name = "notebook-calc"
-version = "1.0.0"
-description = "离线计算笔记"
+name = "notecalc"
+version = "0.1.0"
+description = "noteCalc"
 edition = "2021"
 rust-version = "1.82"
 
 [lib]
-name = "notebook_calc_lib"
+name = "notecalc_lib"
 # Desktop-only: `cdylib` (needed for Android) makes the windows-gnu linker emit a
 # DLL whose export ordinals overflow ("export ordinal too large"), so it is
 # intentionally omitted.
