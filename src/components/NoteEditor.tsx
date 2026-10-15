@@ -247,6 +247,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
   const [caret, setCaret] = useState({ offset: 0, line: 0 });
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const lines = useMemo(() => content.split("\n"), [content]);
   const starts = useMemo(() => computeLineStarts(content), [content]);
@@ -445,7 +446,12 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
 
   useEffect(() => {
     if (!menu) return undefined;
-    const close = () => setMenu(null);
+    // mousedown 先于 click 触发。若在这里无条件关闭菜单，条目会在 click 派发前被卸载，
+    // 菜单里的点击就永远执行不到。因此菜单内部的 mousedown 必须放行。
+    const close = (event: MouseEvent) => {
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) return;
+      setMenu(null);
+    };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenu(null);
     };
@@ -597,12 +603,26 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
         />
       </div>
       {menu ? (
-        <div className="badge-menu" style={{ left: menu.x, top: menu.y }}>
-          <button type="button" className="menu-item" onClick={() => onToggleHex(!showHex)}>
+        <div className="badge-menu" ref={menuRef} style={{ left: menu.x, top: menu.y }}>
+          <button
+            type="button"
+            className="menu-item"
+            onClick={() => {
+              setMenu(null);
+              onToggleHex(!showHex);
+            }}
+          >
             <span className="tick">{showHex ? "✓" : ""}</span>
             <span className="label">整数结果显示十六进制</span>
           </button>
-          <button type="button" className="menu-item" onClick={() => onToggleBinary(!showBinary)}>
+          <button
+            type="button"
+            className="menu-item"
+            onClick={() => {
+              setMenu(null);
+              onToggleBinary(!showBinary);
+            }}
+          >
             <span className="tick">{showBinary ? "✓" : ""}</span>
             <span className="label">整数结果显示二进制</span>
           </button>
@@ -614,7 +634,10 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
                 type="button"
                 key={tone}
                 className={tone === badgeTone ? "tone on" : "tone"}
-                onClick={() => onToneChange(tone)}
+                onClick={() => {
+                  setMenu(null);
+                  onToneChange(tone);
+                }}
               >
                 {BADGE_TONE_LABELS[tone]}
               </button>
