@@ -737,7 +737,10 @@ input {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  padding: 0 8px 0 12px;
+  /* 左侧色条必须被徽标自己的圆角裁掉：色条一旦自带圆角，它的弧线和徽标的弧线
+     在左上/左下角各错开一处，看起来就像挂在徽标左边的一个独立小胶囊。 */
+  overflow: hidden;
+  padding: 0 8px 0 10px;
   border-radius: 5px;
   border: 0;
   white-space: pre;
@@ -752,9 +755,11 @@ input {
   position: absolute;
   left: 0;
   top: 0;
-  width: 5px;
+  /* 2px：色条已经是徽标左边本身，不再是叠在上面的一条胶囊，所以收细用色块说话；
+     自身不带圆角，形状完全交给父级圆角。 */
+  width: 2px;
   height: 100%;
-  border-radius: 2.5px;
+  border-radius: 0;
 }
 
 .badge-text {
