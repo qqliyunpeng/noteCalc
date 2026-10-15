@@ -1,0 +1,89 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+# 需要写权限来创建 Release 并上传安装包
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            platform: windows-latest
+            args: "--bundles nsis,msi"
+          - name: macOS Apple Silicon
+            platform: macos-latest
+            args: "--target aarch64-apple-darwin --bundles app,dmg"
+          - name: macOS Intel
+            platform: macos-latest
+            args: "--target x86_64-apple-darwin --bundles app,dmg"
+          - name: Linux
+            platform: ubuntu-22.04
+            args: "--bundles deb,appimage"
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Linux 系统依赖
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      # pnpm 版本取自 package.json 的 packageManager 字段
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 安装 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: macOS 交叉编译目标
+        if: startsWith(matrix.platform, 'macos')
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: 缓存 Rust 依赖
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: 安装前端依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建并生成 Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "离线计算笔记 v__VERSION__"
+          releaseBody: |
+            Windows：`.msi`（需要管理员）与 `-setup.exe`（当前用户，无需管理员）
+            macOS：`.dmg`（Apple Silicon 与 Intel 各一份，未签名）
+            Linux：`.deb` 与 `.AppImage`
+
+            详细说明见仓库 README。
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: 引擎自检（Windows 发布二进制）
+        if: matrix.platform == 'windows-latest'
+        run: ./src-tauri/target/release/notebook-calc.exe --check
+

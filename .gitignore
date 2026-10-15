@@ -1,0 +1,17 @@
+# 依赖与构建产物
+node_modules
+dist
+src-tauri/target
+
+# Tauri 生成的 ACL schema（构建时自动重建）
+src-tauri/gen/schemas
+
+# 本机链接器配置：由 scripts/setup-linker.ps1 生成，含本机绝对路径，不入库
+.cargo/config.toml
+
+# 编辑器 / 系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.local

@@ -1,0 +1,127 @@
+/* ---------------------------------------------------------------------------
+   离线计算笔记 — design tokens
+   Direction: a desk calculator you can write in. Cool slate surfaces, one blue
+   signal accent, hairline rules, monospace editor. Token names follow the
+   semantic roles the editor and the badge layer need.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --font-ui: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI Variable Text",
+    "Segoe UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif;
+  --font-editor: Consolas, "Cascadia Mono", ui-monospace, monospace;
+
+  --r-lg: 10px;
+  --r-md: 7px;
+  --r-sm: 5px;
+
+  --t-fast: 110ms;
+  --t-base: 200ms;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #161b22;
+  --bg-grain: radial-gradient(
+      120% 80% at 8% -10%,
+      rgba(59, 130, 246, 0.09),
+      transparent 60%
+    ),
+    radial-gradient(80% 60% at 100% 0%, rgba(32, 214, 107, 0.05), transparent 58%);
+
+  --panel: #1d242d;
+  --panel-2: #232b35;
+  --panel-3: #2b3441;
+  --line: #313b47;
+  --line-strong: #3d4956;
+
+  --ink: #d6dde7;
+  --ink-2: #9aa6b4;
+  --ink-3: #6d7987;
+
+  --accent: #4c9af0;
+  --accent-ink: #0b1116;
+  --accent-wash: color-mix(in srgb, var(--accent) 16%, transparent);
+  --danger: #f0645f;
+  --warn: #e0a94a;
+  --ok: #35c877;
+
+  --editor-bg: #11161c;
+  --editor-ink: #d8dee9;
+  --line-band: #1e2732;
+  --bracket-bg: #725a28;
+  --bracket-ink: #ffffff;
+  --gutter-bg: #0d1218;
+  --gutter-ink: #687583;
+  --gutter-ink-current: #d3dae3;
+  --selection: rgba(40, 94, 88, 0.7);
+
+  --tok-number: #55d99f;
+  --tok-variable: #f1b45f;
+  --tok-function: #b69aff;
+  --tok-constant: #8ed6ff;
+  --tok-unit: #79c9ec;
+  --tok-operator: #d9dee6;
+  --tok-comment: #778395;
+  --tok-title: #8cc4ff;
+  --tok-subtitle: #65a9ff;
+
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 12px 30px -18px rgba(0, 0, 0, 0.95);
+  --shadow-pop: 0 18px 38px -16px rgba(0, 0, 0, 0.75);
+  --scroll: #333b47;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #edf1f5;
+  --bg-grain: radial-gradient(
+      120% 80% at 6% -12%,
+      rgba(37, 99, 235, 0.09),
+      transparent 58%
+    ),
+    radial-gradient(80% 60% at 100% 0%, rgba(8, 185, 80, 0.06), transparent 56%);
+
+  --panel: #f8fafc;
+  --panel-2: #f1f5f9;
+  --panel-3: #e7edf3;
+  --line: #d8e0e8;
+  --line-strong: #c3cedb;
+
+  --ink: #223044;
+  --ink-2: #526174;
+  --ink-3: #8a97a6;
+
+  --accent: #2563eb;
+  --accent-ink: #ffffff;
+  --accent-wash: color-mix(in srgb, var(--accent) 12%, transparent);
+  --danger: #d1453d;
+  --warn: #a9761a;
+  --ok: #14a05a;
+
+  --editor-bg: #ffffff;
+  --editor-ink: #263548;
+  --line-band: #edf5fb;
+  --bracket-bg: #ffe49c;
+  --bracket-ink: #273447;
+  --gutter-bg: #f2f5f7;
+  --gutter-ink: #98a3af;
+  --gutter-ink-current: #435164;
+  --selection: rgba(185, 216, 210, 0.85);
+
+  --tok-number: #07865f;
+  --tok-variable: #c56a00;
+  --tok-function: #7438e8;
+  --tok-constant: #256b9a;
+  --tok-unit: #23779d;
+  --tok-operator: #516174;
+  --tok-comment: #8290a2;
+  --tok-title: #0d57a1;
+  --tok-subtitle: #1769c2;
+
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 12px 28px -20px rgba(35, 48, 68, 0.4);
+  --shadow-pop: 0 20px 40px -22px rgba(35, 48, 68, 0.45);
+  --scroll: #c3cedb;
+}

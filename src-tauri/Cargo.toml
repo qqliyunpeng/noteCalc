@@ -1,0 +1,29 @@
+[package]
+name = "notebook-calc"
+version = "1.0.0"
+description = "离线计算笔记"
+edition = "2021"
+rust-version = "1.82"
+
+[lib]
+name = "notebook_calc_lib"
+# Desktop-only: `cdylib` (needed for Android) makes the windows-gnu linker emit a
+# DLL whose export ordinals overflow ("export ordinal too large"), so it is
+# intentionally omitted.
+crate-type = ["staticlib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
