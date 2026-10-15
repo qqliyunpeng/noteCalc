@@ -626,6 +626,9 @@ input {
 .badge-layer {
   position: absolute;
   inset: 0;
+  /* 必须压在 .code-input 之上：两者都是绝对定位、z-index 同为 auto 时，DOM 顺序靠后的
+     透明 textarea 会赢下命中测试，徽标的点击、悬停提示和右键菜单就全被它吃掉了。 */
+  z-index: 2;
   pointer-events: none;
   will-change: transform;
 }

@@ -352,6 +352,19 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     [content, onChange],
   );
 
+  const forwardWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      // 徽标浮在 textarea 之上（见 app.css 的 .badge-layer），滚轮落在徽标上时找不到
+      // textarea 这个可滚动祖先，这里把滚动手动转过去，免得光标停在徽标上滚不动。
+      textarea.scrollTop += event.deltaY;
+      textarea.scrollLeft += event.deltaX;
+      syncScroll();
+    },
+    [syncScroll],
+  );
+
   const copyLineResult = useCallback(
     (line: number) => {
       const result = results[line];
@@ -513,7 +526,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
             ))}
           </div>
         </pre>
-        <div className="badge-layer" ref={badgeLayerRef}>
+        <div className="badge-layer" ref={badgeLayerRef} onWheel={forwardWheel}>
           {badgeRows.map((row) => {
             const result = results[row.line];
             return (
