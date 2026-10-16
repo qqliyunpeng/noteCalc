@@ -155,19 +155,32 @@ function locateLine(starts: number[], offset: number): number {
   return Math.max(0, low);
 }
 
-/** Port of `InlineResultEditor._matching_bracket_positions`. */
+/**
+ * Port of `InlineResultEditor._matching_bracket_positions`, extended to quotes.
+ * `"` and `'` delimit a list just like brackets do, but both of their ends are
+ * the same character, so they follow their own rule: the partner is picked by
+ * parity, an even number of that quote before it opening the pair and an odd
+ * number closing it. The count stops at the line boundaries, so a stray quote
+ * on another line can never flip the pairing.
+ */
 function matchBrackets(content: string, offset: number): number[] {
   const opening = "([{";
   const closing = ")]}";
+  const quotes = "\"'";
   let position = -1;
   for (const candidate of [offset, offset - 1]) {
-    if (candidate >= 0 && candidate < content.length && "()[]{}".includes(content[candidate])) {
+    if (
+      candidate >= 0 &&
+      candidate < content.length &&
+      `()[]{}${quotes}`.includes(content[candidate])
+    ) {
       position = candidate;
       break;
     }
   }
   if (position < 0) return [];
   const bracket = content[position];
+  if (quotes.includes(bracket)) return matchQuote(content, position, bracket);
   const openingIndex = opening.indexOf(bracket);
   const forward = openingIndex >= 0;
   const target = forward ? closing[openingIndex] : opening[closing.indexOf(bracket)];
@@ -188,6 +201,25 @@ function matchBrackets(content: string, offset: number): number[] {
         if (depth === 0) return [index, position];
       }
     }
+  }
+  return [position];
+}
+
+/** Partner of a symmetric quote character, searched inside its own line. */
+function matchQuote(content: string, position: number, quote: string): number[] {
+  const lineStart = content.lastIndexOf("\n", position - 1) + 1;
+  const newline = content.indexOf("\n", position);
+  const lineEnd = newline < 0 ? content.length : newline;
+
+  let seen = 0;
+  for (let index = lineStart; index < position; index += 1) {
+    if (content[index] === quote) seen += 1;
+  }
+
+  const forward = seen % 2 === 0;
+  const step = forward ? 1 : -1;
+  for (let index = position + step; index >= lineStart && index < lineEnd; index += step) {
+    if (content[index] === quote) return forward ? [position, index] : [index, position];
   }
   return [position];
 }
