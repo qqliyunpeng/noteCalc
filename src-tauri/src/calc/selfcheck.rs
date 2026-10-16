@@ -19,7 +19,7 @@ fn numeric(value: &Value) -> Option<f64> {
 
 fn numeric_list(value: &Value) -> Option<Vec<f64>> {
     match value {
-        Value::List(items) => items.iter().map(numeric).collect(),
+        Value::List(items, _) => items.iter().map(numeric).collect(),
         _ => None,
     }
 }
@@ -278,17 +278,17 @@ pub fn run() -> i32 {
         expect_list("'123, 567, 100,'", &[123.0, 567.0, 100.0])?;
         expect_list("“100 200” / 10", &[10.0, 20.0])?;
         expect_list("｛1，2，3｝ + (4 5 6)", &[5.0, 7.0, 9.0])?;
-        expect_line_result("数据 = \"1 2 3\"\n数据 * 2", 1, "expression", Some("[2, 4, 6]"))
+        expect_line_result("数据 = \"1 2 3\"\n数据 * 2", 1, "expression", Some("\"2 4 6\""))
     });
     case!("引号数组行结果", {
-        expect_line_result("\"123 567 100\" / 10", 0, "expression", Some("[12.3, 56.7, 10]"))
+        expect_line_result("\"123 567 100\" / 10", 0, "expression", Some("\"12.3 56.7 10\""))
     });
     case!("引号数组跨行", {
         expect_types("\"100,\n200\" / 10", &["continuation", "expression"])?;
-        expect_line_result("\"100,\n200\" / 10", 1, "expression", Some("[10, 20]"))?;
+        expect_line_result("\"100,\n200\" / 10", 1, "expression", Some("\"10, 20\""))?;
         let content = "数据 = \"100,\n200\"\n数据 / 10";
         expect_types(content, &["continuation", "assignment", "expression"])?;
-        expect_line_result(content, 2, "expression", Some("[10, 20]"))
+        expect_line_result(content, 2, "expression", Some("\"10, 20\""))
     });
     case!("引号配对", {
         let unterminated = render("\"100 200", 4).unwrap_err();
@@ -309,6 +309,24 @@ pub fn run() -> i32 {
     case!("数组中的进制字面量", {
         expect_list("{0x7B, 0b111}", &[123.0, 7.0])?;
         expect_list("[0xFF 0b1111]", &[255.0, 15.0])
+    });
+    case!("数组结果沿用原写法", {
+        expect_text("\"100 1000 10\" / 5", "\"20 200 2\"")?;
+        expect_text("[100 1000 10] / 5", "[20 200 2]")?;
+        expect_text("[100, 1000, 10] / 5", "[20, 200, 2]")?;
+        expect_text("{100 1000 10} / 5", "{20 200 2}")?;
+        expect_text("(100, 1000, 10) / 5", "(20, 200, 2)")?;
+        expect_text("'100, 1000, 10' / 5", "'20, 200, 2'")?;
+        expect_text("sqrt([1, 4, 9])", "[1, 2, 3]")?;
+        expect_text("2 * \"1 2\"", "\"2 4\"")?;
+        expect_text("\"1, 2\" + [3 4]", "\"4, 6\"")?;
+        expect_text("(7,)", "(7)")?;
+        expect_line_result(
+            "数据 = \"1 2 3\"\n数据 / 3",
+            1,
+            "expression",
+            Some("\"0.3333 0.6667 1\""),
+        )
     });
     case!("引号与多赋值、普通文字", {
         expect_line_result("it's 3", 0, "normal", None)?;
@@ -331,7 +349,7 @@ pub fn run() -> i32 {
             "{100,\n200,\n300} / 10",
             &["continuation", "continuation", "expression"],
         )?;
-        expect_line_result("{100,\n200,\n300} / 10", 2, "expression", Some("[10, 20, 30]"))
+        expect_line_result("{100,\n200,\n300} / 10", 2, "expression", Some("{10, 20, 30}"))
     });
     case!("跨行向量赋值", {
         let content = "数据 = [\n100,\n200\n]\n数据 / 10";

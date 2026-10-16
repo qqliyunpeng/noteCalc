@@ -4,11 +4,49 @@ use serde_json::{json, Value as Json};
 
 use super::units::{find_unit, UnitDefinition};
 
+/// How the elements of a list literal were separated, so a result keeps the
+/// same punctuation as the expression that produced it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ListSeparator {
+    Comma,
+    Space,
+}
+
+/// The punctuation a list was written with: `[1, 2]`, `[1 2]`, `(1, 2)`,
+/// `{1 2}`, `"1 2"` or `'1, 2'`. Results reuse it, so `"100 1000 10" / 5`
+/// reads back as `"20 200 2"` instead of `[20, 200, 2]`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ListStyle {
+    pub open: char,
+    pub close: char,
+    pub separator: ListSeparator,
+}
+
+impl ListStyle {
+    pub fn separator_text(self) -> &'static str {
+        match self.separator {
+            ListSeparator::Comma => ", ",
+            ListSeparator::Space => " ",
+        }
+    }
+}
+
+/// Style of the lists the engine builds on its own: `[1, 2]`.
+impl Default for ListStyle {
+    fn default() -> Self {
+        ListStyle {
+            open: '[',
+            close: ']',
+            separator: ListSeparator::Comma,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Value {
     Number(f64),
     Unit(f64, &'static str),
-    List(Vec<Value>),
+    List(Vec<Value>, ListStyle),
 }
 
 pub fn is_unit_value(value: &Value) -> bool {
@@ -32,7 +70,7 @@ pub fn convert_unit(number: f64, source_name: &str, target_name: &str) -> Result
 /// Mirrors Python's `_number`: rejects vectors and unit-carrying numbers.
 pub fn number_of(value: &Value) -> Result<f64, String> {
     match value {
-        Value::List(_) => Err("此处需要单个数字".to_string()),
+        Value::List(_, _) => Err("此处需要单个数字".to_string()),
         Value::Unit(_, _) => Err("此处需要无单位数字".to_string()),
         Value::Number(number) => Ok(*number),
     }
@@ -42,7 +80,7 @@ pub fn number_from(value: &Value) -> f64 {
     match value {
         Value::Number(number) => *number,
         Value::Unit(number, _) => *number,
-        Value::List(_) => f64::NAN,
+        Value::List(_, _) => f64::NAN,
     }
 }
 
@@ -92,12 +130,17 @@ fn format_exponential(value: f64, places: usize) -> String {
 
 pub fn format_value(value: &Value, precision: u32) -> String {
     match value {
-        Value::List(items) => {
+        Value::List(items, style) => {
             let parts: Vec<String> = items
                 .iter()
                 .map(|item| format_value(item, precision))
                 .collect();
-            format!("[{}]", parts.join(", "))
+            format!(
+                "{}{}{}",
+                style.open,
+                parts.join(style.separator_text()),
+                style.close
+            )
         }
         Value::Unit(number, unit) => {
             format!("{} {}", format_number(*number, precision), unit)
@@ -108,14 +151,14 @@ pub fn format_value(value: &Value, precision: u32) -> String {
 
 pub fn values_equal(left: &Value, right: &Value) -> bool {
     match (left, right) {
-        (Value::List(left_items), Value::List(right_items)) => {
+        (Value::List(left_items, _), Value::List(right_items, _)) => {
             left_items.len() == right_items.len()
                 && left_items
                     .iter()
                     .zip(right_items.iter())
                     .all(|(left_item, right_item)| values_equal(left_item, right_item))
         }
-        (Value::List(_), _) | (_, Value::List(_)) => false,
+        (Value::List(_, _), _) | (_, Value::List(_, _)) => false,
         (Value::Unit(left_number, left_unit), Value::Unit(right_number, right_unit)) => {
             let (Some(left_definition), Some(right_definition)) =
                 (find_unit(left_unit), find_unit(right_unit))
@@ -146,7 +189,7 @@ fn close(left: f64, right: f64) -> bool {
 pub fn to_json(value: &Value) -> Json {
     match value {
         Value::Number(number) => json!(number),
-        Value::List(items) => Json::Array(items.iter().map(to_json).collect()),
+        Value::List(items, _) => Json::Array(items.iter().map(to_json).collect()),
         Value::Unit(number, unit) => json!({ "value": number, "unit": unit }),
     }
 }

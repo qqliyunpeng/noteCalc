@@ -27,13 +27,30 @@ export function integerBaseValues(
 
 interface IntegerVector {
   numbers: number[];
-  bracketed: boolean;
+  open: string;
+  close: string;
+  separator: string;
 }
 
-/** `[0x7B, 0x237]` — brackets carried over from the array being restated. */
+/**
+ * Delimiter pairs a list result can wear, mirroring the literal it came from:
+ * the engine echoes the brackets or quotes of the expression back into the
+ * result, so `"100 1000 10" / 5` gives `"20 200 2"`.
+ */
+const LIST_DELIMITERS: [string, string][] = [
+  ["[", "]"],
+  ["{", "}"],
+  ["(", ")"],
+  ['"', '"'],
+  ["'", "'"],
+];
+
+/** `[0x7B, 0x237]` / `"0x7B 0x237"` — the delimiters of the array restated. */
 function restateIntegers(integers: IntegerVector, radix: 16 | 2): string {
-  const text = integers.numbers.map((number) => baseText(number, radix)).join(", ");
-  return integers.bracketed ? `[${text}]` : text;
+  const text = integers.numbers
+    .map((number) => baseText(number, radix))
+    .join(integers.separator);
+  return `${integers.open}${text}${integers.close}`;
 }
 
 /** `-0x7B` / `0b1010`, the same shapes the Python badges printed. */
@@ -45,24 +62,34 @@ function baseText(value: number, radix: 16 | 2): string {
 
 /**
  * Integers a badge can restate in another base: a lone integer, or every
- * element of a flat list such as `[123, 567, 100]` — elements are joined with
- * `", "` and the array brackets are remembered so the restated value still
- * reads like the result it mirrors. Decimals, units and nested lists return
- * null so the badges stay all-or-nothing per line.
+ * element of a flat list such as `[123, 567, 100]` or `"123 567 100"` — the
+ * delimiters and the separator are remembered so the restated value still
+ * reads exactly like the result it mirrors. Decimals, units and nested lists
+ * return null so the badges stay all-or-nothing per line.
  */
 function integerElements(value: string | null): IntegerVector | null {
   if (!value) return null;
-  const bracketed = /^\[.*\]$/.test(value);
-  const text = bracketed ? value.slice(1, -1) : value;
+  let open = "";
+  let close = "";
+  let text = value;
+  for (const [start, end] of LIST_DELIMITERS) {
+    if (value.length >= 2 && value.startsWith(start) && value.endsWith(end)) {
+      open = start;
+      close = end;
+      text = value.slice(1, -1);
+      break;
+    }
+  }
   if (!text) return null;
+  const separator = text.includes(", ") ? ", " : " ";
   const numbers: number[] = [];
-  for (const part of text.split(", ")) {
+  for (const part of text.split(separator)) {
     if (!/^-?\d+$/.test(part)) return null;
     const number = Number(part);
     if (!Number.isSafeInteger(number)) return null;
     numbers.push(number);
   }
-  return { numbers, bracketed };
+  return { numbers, open, close, separator };
 }
 
 export function resultBadges(

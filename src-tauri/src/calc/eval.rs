@@ -5,7 +5,7 @@ use std::sync::OnceLock;
 
 use super::parser::{CalcResult, Node, Parser};
 use super::units::find_unit;
-use super::value::{convert_unit, is_unit_value, number_from, number_of, Value};
+use super::value::{convert_unit, is_unit_value, number_from, number_of, ListStyle, Value};
 
 pub fn constants() -> &'static HashMap<String, f64> {
     static CONSTANTS: OnceLock<HashMap<String, f64>> = OnceLock::new();
@@ -31,15 +31,24 @@ where
     F: Fn(&Value) -> CalcResult<Value>,
 {
     match value {
-        Value::List(items) => {
+        Value::List(items, style) => {
             let mut mapped = Vec::with_capacity(items.len());
             for item in items {
                 mapped.push(map_vector(item, operation)?);
             }
-            Ok(Value::List(mapped))
+            Ok(Value::List(mapped, *style))
         }
         other => operation(other),
     }
+}
+
+/// Punctuation of the first list among `arguments`: element-wise results echo
+/// the first array they were built from.
+fn list_style_of(arguments: &[Value]) -> Option<ListStyle> {
+    arguments.iter().find_map(|argument| match argument {
+        Value::List(_, style) => Some(*style),
+        _ => None,
+    })
 }
 
 fn domain_error(name: &str) -> String {
@@ -133,7 +142,7 @@ fn evaluate_function(name: &str, arguments: &[Value]) -> CalcResult<Value> {
 
     let mut vector_lengths: Vec<usize> = Vec::new();
     for argument in arguments {
-        if let Value::List(items) = argument {
+        if let Value::List(items, _) = argument {
             if !vector_lengths.contains(&items.len()) {
                 vector_lengths.push(items.len());
             }
@@ -143,18 +152,19 @@ fn evaluate_function(name: &str, arguments: &[Value]) -> CalcResult<Value> {
         return Err("数组长度必须一致".to_string());
     }
     if let Some(length) = vector_lengths.first().copied() {
+        let style = list_style_of(arguments).unwrap_or_default();
         let mut results = Vec::with_capacity(length);
         for index in 0..length {
             let mut element_arguments = Vec::with_capacity(arguments.len());
             for argument in arguments {
                 match argument {
-                    Value::List(items) => element_arguments.push(items[index].clone()),
+                    Value::List(items, _) => element_arguments.push(items[index].clone()),
                     other => element_arguments.push(other.clone()),
                 }
             }
             results.push(evaluate_function(name, &element_arguments)?);
         }
-        return Ok(Value::List(results));
+        return Ok(Value::List(results, style));
     }
 
     let mut numeric_arguments = Vec::with_capacity(arguments.len());
@@ -180,12 +190,12 @@ fn evaluate_function(name: &str, arguments: &[Value]) -> CalcResult<Value> {
 pub fn evaluate_node(node: &Node, scope: &HashMap<String, Value>) -> CalcResult<Value> {
     match node {
         Node::Number(number) => Ok(Value::Number(*number)),
-        Node::Vector(items) => {
+        Node::Vector(items, style) => {
             let mut values = Vec::with_capacity(items.len());
             for item in items {
                 values.push(evaluate_node(item, scope)?);
             }
-            Ok(Value::List(values))
+            Ok(Value::List(values, *style))
         }
         Node::Variable(name) => {
             if let Some(constant) = constants().get(name) {
@@ -250,8 +260,8 @@ pub fn evaluate_node(node: &Node, scope: &HashMap<String, Value>) -> CalcResult<
 }
 
 pub fn evaluate_binary(operator: char, left: &Value, right: &Value) -> CalcResult<Value> {
-    if let Value::List(left_items) = left {
-        if let Value::List(right_items) = right {
+    if let Value::List(left_items, style) = left {
+        if let Value::List(right_items, _) = right {
             if left_items.len() != right_items.len() {
                 return Err("数组长度必须一致".to_string());
             }
@@ -259,20 +269,20 @@ pub fn evaluate_binary(operator: char, left: &Value, right: &Value) -> CalcResul
             for (left_item, right_item) in left_items.iter().zip(right_items.iter()) {
                 results.push(evaluate_binary(operator, left_item, right_item)?);
             }
-            return Ok(Value::List(results));
+            return Ok(Value::List(results, *style));
         }
         let mut results = Vec::with_capacity(left_items.len());
         for left_item in left_items {
             results.push(evaluate_binary(operator, left_item, right)?);
         }
-        return Ok(Value::List(results));
+        return Ok(Value::List(results, *style));
     }
-    if let Value::List(right_items) = right {
+    if let Value::List(right_items, style) = right {
         let mut results = Vec::with_capacity(right_items.len());
         for right_item in right_items {
             results.push(evaluate_binary(operator, left, right_item)?);
         }
-        return Ok(Value::List(results));
+        return Ok(Value::List(results, *style));
     }
 
     let left_unit = is_unit_value(left);

@@ -1,6 +1,7 @@
 //! Tokenizer and recursive-descent parser, ported from `calculator_core.py`.
 
 use super::units::find_unit;
+use super::value::{ListSeparator, ListStyle};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TokenKind {
@@ -51,7 +52,7 @@ pub struct Token {
 #[derive(Clone, Debug)]
 pub enum Node {
     Number(f64),
-    Vector(Vec<Node>),
+    Vector(Vec<Node>, ListStyle),
     Variable(String),
     Unary(char, Box<Node>),
     Percent(Box<Node>),
@@ -409,12 +410,18 @@ impl Parser {
     /// Reads list elements up to `closing`. Elements may be separated by commas,
     /// by whitespace or by both, and one trailing separator is allowed, so
     /// `{123, 567, 100}`, `{123, 567, 100,}` and `{123 567 100}` are the same
-    /// list. The flag tells the single-element `(1)` grouping apart from `(1,)`.
-    fn parse_elements(&mut self, closing: TokenKind) -> CalcResult<(Vec<Node>, bool)> {
+    /// list. The flag tells the single-element `(1)` grouping apart from `(1,)`;
+    /// the separator is the one the result echoes back, and a comma wins when a
+    /// literal mixes both (`, ` already carries the whitespace the other way).
+    fn parse_elements(
+        &mut self,
+        closing: TokenKind,
+    ) -> CalcResult<(Vec<Node>, bool, ListSeparator)> {
         let mut items: Vec<Node> = Vec::new();
         let mut separated = false;
+        let mut separator = ListSeparator::Space;
         if self.peek().kind == closing {
-            return Ok((items, separated));
+            return Ok((items, separated, separator));
         }
         items.push(self.parse_conversion()?);
         loop {
@@ -423,6 +430,7 @@ impl Parser {
             }
             if self.peek().kind == TokenKind::Comma {
                 separated = true;
+                separator = ListSeparator::Comma;
                 while self.peek().kind == TokenKind::Comma {
                     self.advance();
                 }
@@ -439,14 +447,15 @@ impl Parser {
             }
             break;
         }
-        Ok((items, separated))
+        Ok((items, separated, separator))
     }
 
     /// `"123 567 100"` / `'123, 567, 100,'`: both quote characters delimit a
     /// list exactly like brackets do, and the pair has to match.
     fn parse_quoted_list(&mut self) -> CalcResult<Node> {
         let opening = self.advance();
-        let (items, _) = self.parse_elements(TokenKind::Quote)?;
+        let quote = opening.value.chars().next().unwrap_or('"');
+        let (items, _, separator) = self.parse_elements(TokenKind::Quote)?;
         let closing = self.peek().clone();
         if closing.kind == TokenKind::Eof {
             return Err(format!("引号未闭合（位置 {}）", opening.position + 1));
@@ -455,7 +464,14 @@ impl Parser {
             return Err(format!("引号不匹配（位置 {}）", closing.position + 1));
         }
         self.advance();
-        Ok(Node::Vector(items))
+        Ok(Node::Vector(
+            items,
+            ListStyle {
+                open: quote,
+                close: quote,
+                separator,
+            },
+        ))
     }
 
     fn parse_primary(&mut self) -> CalcResult<Node> {
@@ -468,7 +484,7 @@ impl Parser {
             self.advance();
             if self.peek().kind == TokenKind::LParen {
                 self.advance();
-                let (arguments, _) = self.parse_elements(TokenKind::RParen)?;
+                let (arguments, _, _) = self.parse_elements(TokenKind::RParen)?;
                 self.expect(TokenKind::RParen)?;
                 return Ok(Node::Function(token.value, arguments));
             }
@@ -479,24 +495,45 @@ impl Parser {
         }
         if token.kind == TokenKind::LParen {
             self.advance();
-            let (mut items, separated) = self.parse_elements(TokenKind::RParen)?;
+            let (mut items, separated, separator) = self.parse_elements(TokenKind::RParen)?;
             self.expect(TokenKind::RParen)?;
             if !separated && items.len() == 1 {
                 return Ok(items.remove(0));
             }
-            return Ok(Node::Vector(items));
+            return Ok(Node::Vector(
+                items,
+                ListStyle {
+                    open: '(',
+                    close: ')',
+                    separator,
+                },
+            ));
         }
         if token.kind == TokenKind::LBracket {
             self.advance();
-            let (items, _) = self.parse_elements(TokenKind::RBracket)?;
+            let (items, _, separator) = self.parse_elements(TokenKind::RBracket)?;
             self.expect(TokenKind::RBracket)?;
-            return Ok(Node::Vector(items));
+            return Ok(Node::Vector(
+                items,
+                ListStyle {
+                    open: '[',
+                    close: ']',
+                    separator,
+                },
+            ));
         }
         if token.kind == TokenKind::LBrace {
             self.advance();
-            let (items, _) = self.parse_elements(TokenKind::RBrace)?;
+            let (items, _, separator) = self.parse_elements(TokenKind::RBrace)?;
             self.expect(TokenKind::RBrace)?;
-            return Ok(Node::Vector(items));
+            return Ok(Node::Vector(
+                items,
+                ListStyle {
+                    open: '{',
+                    close: '}',
+                    separator,
+                },
+            ));
         }
         Err(format!("表达式不完整（位置 {}）", token.position + 1))
     }
