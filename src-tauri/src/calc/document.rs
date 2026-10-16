@@ -182,7 +182,7 @@ fn starts_assignment_vector(text: &str) -> bool {
     };
     matches!(
         rest.trim_start_matches(is_space).chars().next(),
-        Some('[' | '(' | '{')
+        Some('[' | '(' | '{' | '"' | '\'')
     )
 }
 
@@ -227,20 +227,32 @@ pub fn split_inline_assignments(expression: &str) -> Option<Vec<(String, String)
     let mut start = 0usize;
     let mut stack: Vec<char> = Vec::new();
     for (position, character) in expression.char_indices() {
-        if character == '(' || character == '[' || character == '{' {
-            stack.push(character);
-        } else if character == ')' || character == ']' || character == '}' {
-            let opening = match character {
-                ')' => '(',
-                ']' => '[',
-                _ => '{',
-            };
-            if stack.last() == Some(&opening) {
-                stack.pop();
+        match character {
+            // Quotes delimit lists too, so a separator inside them separates
+            // elements rather than assignments.
+            '"' | '\'' => {
+                if stack.last() == Some(&character) {
+                    stack.pop();
+                } else {
+                    stack.push(character);
+                }
             }
-        } else if stack.is_empty() && matches!(character, ',' | ';' | '\u{ff0c}' | '\u{ff1b}') {
-            parts.push(expression[start..position].trim().to_string());
-            start = position + character.len_utf8();
+            '(' | '[' | '{' => stack.push(character),
+            ')' | ']' | '}' => {
+                let opening = match character {
+                    ')' => '(',
+                    ']' => '[',
+                    _ => '{',
+                };
+                if stack.last() == Some(&opening) {
+                    stack.pop();
+                }
+            }
+            ',' | ';' | '\u{ff0c}' | '\u{ff1b}' if stack.is_empty() => {
+                parts.push(expression[start..position].trim().to_string());
+                start = position + character.len_utf8();
+            }
+            _ => {}
         }
     }
     parts.push(expression[start..].trim().to_string());
@@ -265,6 +277,11 @@ pub fn looks_like_expression(line: &str, scope: &HashMap<String, Value>) -> bool
     if contains_digit(line) && contains_operator(line) {
         return true;
     }
+    // `"100 200` is an unterminated list, not prose; an apostrophe inside a
+    // line (`it's 3`) does not start it and stays text.
+    if line.starts_with('"') || line.starts_with('\'') {
+        return true;
+    }
     if scope.contains_key(line) || constants().contains_key(line) {
         return true;
     }
@@ -279,22 +296,32 @@ pub fn looks_like_expression(line: &str, scope: &HashMap<String, Value>) -> bool
 
 pub fn bracket_balance(expression: &str) -> i32 {
     let mut stack: Vec<char> = Vec::new();
+    let mut quote: Option<char> = None;
     for character in normalize_expression(expression).chars() {
-        if character == '(' || character == '[' || character == '{' {
-            stack.push(character);
-        } else if character == ')' || character == ']' || character == '}' {
-            let opening = match character {
-                ')' => '(',
-                ']' => '[',
-                _ => '{',
-            };
-            if stack.last() != Some(&opening) {
-                return -1;
+        if let Some(opening) = quote {
+            if character == opening {
+                quote = None;
             }
-            stack.pop();
+            continue;
+        }
+        match character {
+            '"' | '\'' => quote = Some(character),
+            '(' | '[' | '{' => stack.push(character),
+            ')' | ']' | '}' => {
+                let opening = match character {
+                    ')' => '(',
+                    ']' => '[',
+                    _ => '{',
+                };
+                if stack.last() != Some(&opening) {
+                    return -1;
+                }
+                stack.pop();
+            }
+            _ => {}
         }
     }
-    stack.len() as i32
+    stack.len() as i32 + i32::from(quote.is_some())
 }
 
 pub fn can_start_multiline_expression(line: &str, scope: &HashMap<String, Value>) -> bool {
@@ -309,6 +336,7 @@ pub fn can_start_multiline_expression(line: &str, scope: &HashMap<String, Value>
         return true;
     }
     match stripped.chars().next() {
+        Some('"') | Some('\'') => true,
         Some(first) if first == '(' || first == '[' || first == '{' => stripped.contains(','),
         _ => false,
     }

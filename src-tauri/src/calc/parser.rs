@@ -15,6 +15,7 @@ pub enum TokenKind {
     RBracket,
     LBrace,
     RBrace,
+    Quote,
     Comma,
     Eof,
 }
@@ -33,6 +34,7 @@ impl TokenKind {
             TokenKind::RBracket => "RBRACKET",
             TokenKind::LBrace => "LBRACE",
             TokenKind::RBrace => "RBRACE",
+            TokenKind::Quote => "QUOTE",
             TokenKind::Comma => "COMMA",
             TokenKind::Eof => "EOF",
         }
@@ -76,6 +78,8 @@ pub fn normalize_expression(expression: &str) -> String {
             '｛' => '{',
             '｝' => '}',
             '，' => ',',
+            '“' | '”' => '"',
+            '‘' | '’' => '\'',
             other => other,
         })
         .collect()
@@ -93,6 +97,11 @@ fn parse_number_literal(text: &str) -> CalcResult<f64> {
     let lower = text.to_lowercase();
     if let Some(hex_digits) = lower.strip_prefix("0x") {
         let value = u128::from_str_radix(hex_digits, 16)
+            .map_err(|_| format!("无法识别的数字“{text}”"))?;
+        return Ok(value as f64);
+    }
+    if let Some(binary_digits) = lower.strip_prefix("0b") {
+        let value = u128::from_str_radix(binary_digits, 2)
             .map_err(|_| format!("无法识别的数字“{text}”"))?;
         return Ok(value as f64);
     }
@@ -125,6 +134,26 @@ pub fn tokenize(expression: &str) -> CalcResult<Vec<Token>> {
             }
             if digit_start == position {
                 return Err(format!("十六进制数缺少数字（位置 {}）", start + 1));
+            }
+            tokens.push(Token {
+                kind: TokenKind::Number,
+                value: characters[start..position].iter().collect(),
+                position: start,
+            });
+            continue;
+        }
+        if character == '0'
+            && position + 1 < length
+            && (characters[position + 1] == 'b' || characters[position + 1] == 'B')
+        {
+            let start = position;
+            position += 2;
+            let digit_start = position;
+            while position < length && matches!(characters[position], '0' | '1') {
+                position += 1;
+            }
+            if digit_start == position {
+                return Err(format!("二进制数缺少数字（位置 {}）", start + 1));
             }
             tokens.push(Token {
                 kind: TokenKind::Number,
@@ -214,6 +243,7 @@ pub fn tokenize(expression: &str) -> CalcResult<Vec<Token>> {
             ']' => Some(TokenKind::RBracket),
             '{' => Some(TokenKind::LBrace),
             '}' => Some(TokenKind::RBrace),
+            '"' | '\'' => Some(TokenKind::Quote),
             ',' => Some(TokenKind::Comma),
             _ => None,
         };
@@ -362,6 +392,72 @@ impl Parser {
         Ok(node)
     }
 
+    /// Token kinds that can start another element when elements are separated by
+    /// whitespace alone, as in `{100 200 300}`.
+    fn starts_element(kind: TokenKind) -> bool {
+        matches!(
+            kind,
+            TokenKind::Number
+                | TokenKind::Identifier
+                | TokenKind::LParen
+                | TokenKind::LBracket
+                | TokenKind::LBrace
+                | TokenKind::Quote
+        )
+    }
+
+    /// Reads list elements up to `closing`. Elements may be separated by commas,
+    /// by whitespace or by both, and one trailing separator is allowed, so
+    /// `{123, 567, 100}`, `{123, 567, 100,}` and `{123 567 100}` are the same
+    /// list. The flag tells the single-element `(1)` grouping apart from `(1,)`.
+    fn parse_elements(&mut self, closing: TokenKind) -> CalcResult<(Vec<Node>, bool)> {
+        let mut items: Vec<Node> = Vec::new();
+        let mut separated = false;
+        if self.peek().kind == closing {
+            return Ok((items, separated));
+        }
+        items.push(self.parse_conversion()?);
+        loop {
+            if self.peek().kind == closing {
+                break;
+            }
+            if self.peek().kind == TokenKind::Comma {
+                separated = true;
+                while self.peek().kind == TokenKind::Comma {
+                    self.advance();
+                }
+                if self.peek().kind == closing {
+                    break;
+                }
+                items.push(self.parse_conversion()?);
+                continue;
+            }
+            if self.has_whitespace_before_current() && Self::starts_element(self.peek().kind) {
+                separated = true;
+                items.push(self.parse_conversion()?);
+                continue;
+            }
+            break;
+        }
+        Ok((items, separated))
+    }
+
+    /// `"123 567 100"` / `'123, 567, 100,'`: both quote characters delimit a
+    /// list exactly like brackets do, and the pair has to match.
+    fn parse_quoted_list(&mut self) -> CalcResult<Node> {
+        let opening = self.advance();
+        let (items, _) = self.parse_elements(TokenKind::Quote)?;
+        let closing = self.peek().clone();
+        if closing.kind == TokenKind::Eof {
+            return Err(format!("引号未闭合（位置 {}）", opening.position + 1));
+        }
+        if closing.value != opening.value {
+            return Err(format!("引号不匹配（位置 {}）", closing.position + 1));
+        }
+        self.advance();
+        Ok(Node::Vector(items))
+    }
+
     fn parse_primary(&mut self) -> CalcResult<Node> {
         let token = self.peek().clone();
         if token.kind == TokenKind::Number {
@@ -372,70 +468,33 @@ impl Parser {
             self.advance();
             if self.peek().kind == TokenKind::LParen {
                 self.advance();
-                let mut arguments = Vec::new();
-                if self.peek().kind != TokenKind::RParen {
-                    arguments.push(self.parse_conversion()?);
-                    while self.peek().kind == TokenKind::Comma {
-                        self.advance();
-                        arguments.push(self.parse_conversion()?);
-                    }
-                }
+                let (arguments, _) = self.parse_elements(TokenKind::RParen)?;
                 self.expect(TokenKind::RParen)?;
                 return Ok(Node::Function(token.value, arguments));
             }
             return Ok(Node::Variable(token.value));
         }
+        if token.kind == TokenKind::Quote {
+            return self.parse_quoted_list();
+        }
         if token.kind == TokenKind::LParen {
             self.advance();
-            let node = self.parse_conversion()?;
-            if self.peek().kind == TokenKind::Comma {
-                let mut items = vec![node];
-                while self.peek().kind == TokenKind::Comma {
-                    self.advance();
-                    items.push(self.parse_conversion()?);
-                }
-                self.expect(TokenKind::RParen)?;
-                return Ok(Node::Vector(items));
-            }
+            let (mut items, separated) = self.parse_elements(TokenKind::RParen)?;
             self.expect(TokenKind::RParen)?;
-            return Ok(node);
+            if !separated && items.len() == 1 {
+                return Ok(items.remove(0));
+            }
+            return Ok(Node::Vector(items));
         }
         if token.kind == TokenKind::LBracket {
             self.advance();
-            let mut items = Vec::new();
-            if self.peek().kind != TokenKind::RBracket {
-                items.push(self.parse_conversion()?);
-                while self.peek().kind == TokenKind::Comma {
-                    self.advance();
-                    items.push(self.parse_conversion()?);
-                }
-            }
+            let (items, _) = self.parse_elements(TokenKind::RBracket)?;
             self.expect(TokenKind::RBracket)?;
             return Ok(Node::Vector(items));
         }
         if token.kind == TokenKind::LBrace {
             self.advance();
-            let mut items = Vec::new();
-            if self.peek().kind != TokenKind::RBrace {
-                items.push(self.parse_conversion()?);
-                while self.peek().kind != TokenKind::RBrace {
-                    if self.peek().kind == TokenKind::Comma {
-                        self.advance();
-                    } else if !(self.has_whitespace_before_current()
-                        && matches!(
-                            self.peek().kind,
-                            TokenKind::Number
-                                | TokenKind::Identifier
-                                | TokenKind::LParen
-                                | TokenKind::LBracket
-                                | TokenKind::LBrace
-                        ))
-                    {
-                        break;
-                    }
-                    items.push(self.parse_conversion()?);
-                }
-            }
+            let (items, _) = self.parse_elements(TokenKind::RBrace)?;
             self.expect(TokenKind::RBrace)?;
             return Ok(Node::Vector(items));
         }

@@ -751,13 +751,13 @@ export default function App() {
         { kind: "separator", key: "edit-4" },
         {
           kind: "action",
-          label: "整数结果显示十六进制",
+          label: "整数/数组结果显示十六进制",
           checked: showHex,
           onSelect: () => setShowHex((value) => !value),
         },
         {
           kind: "action",
-          label: "整数结果显示二进制",
+          label: "整数/数组结果显示二进制",
           checked: showBinary,
           onSelect: () => setShowBinary((value) => !value),
         },

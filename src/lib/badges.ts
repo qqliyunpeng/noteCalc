@@ -17,14 +17,52 @@ export function integerBaseValues(
   showHex: boolean,
   showBinary: boolean,
 ): [string, "hex" | "binary"][] {
-  if (!value || !/^-?\d+$/.test(value)) return [];
-  const number = Number(value);
-  if (!Number.isSafeInteger(number)) return [];
+  const integers = integerElements(value);
+  if (!integers) return [];
   const values: [string, "hex" | "binary"][] = [];
-  const prefix = number < 0 ? "-" : "";
-  if (showHex) values.push([`${prefix}0x${Math.abs(number).toString(16).toUpperCase()}`, "hex"]);
-  if (showBinary) values.push([`${prefix}0b${Math.abs(number).toString(2)}`, "binary"]);
+  if (showHex) values.push([restateIntegers(integers, 16), "hex"]);
+  if (showBinary) values.push([restateIntegers(integers, 2), "binary"]);
   return values;
+}
+
+interface IntegerVector {
+  numbers: number[];
+  bracketed: boolean;
+}
+
+/** `[0x7B, 0x237]` — brackets carried over from the array being restated. */
+function restateIntegers(integers: IntegerVector, radix: 16 | 2): string {
+  const text = integers.numbers.map((number) => baseText(number, radix)).join(", ");
+  return integers.bracketed ? `[${text}]` : text;
+}
+
+/** `-0x7B` / `0b1010`, the same shapes the Python badges printed. */
+function baseText(value: number, radix: 16 | 2): string {
+  const digits = Math.abs(value).toString(radix);
+  const text = radix === 16 ? digits.toUpperCase() : digits;
+  return `${value < 0 ? "-" : ""}0${radix === 16 ? "x" : "b"}${text}`;
+}
+
+/**
+ * Integers a badge can restate in another base: a lone integer, or every
+ * element of a flat list such as `[123, 567, 100]` — elements are joined with
+ * `", "` and the array brackets are remembered so the restated value still
+ * reads like the result it mirrors. Decimals, units and nested lists return
+ * null so the badges stay all-or-nothing per line.
+ */
+function integerElements(value: string | null): IntegerVector | null {
+  if (!value) return null;
+  const bracketed = /^\[.*\]$/.test(value);
+  const text = bracketed ? value.slice(1, -1) : value;
+  if (!text) return null;
+  const numbers: number[] = [];
+  for (const part of text.split(", ")) {
+    if (!/^-?\d+$/.test(part)) return null;
+    const number = Number(part);
+    if (!Number.isSafeInteger(number)) return null;
+    numbers.push(number);
+  }
+  return { numbers, bracketed };
 }
 
 export function resultBadges(

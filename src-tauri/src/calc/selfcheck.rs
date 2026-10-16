@@ -184,6 +184,12 @@ pub fn run() -> i32 {
         expect_line_result("address = 0x2D0\naddress * 2", 1, "expression", Some("1440"))?;
         expect_scope("address = 0x2D0\naddress * 2", &[("address", 720.0)])
     });
+    case!("二进制字面量", {
+        expect_number("0b1010", 10.0)?;
+        expect_number("0B1010 + 1", 11.0)?;
+        expect_line_result("mask = 0b1111\nmask * 2", 0, "assignment", Some("15"))?;
+        expect_line_result("mask = 0b1111\nmask * 2", 1, "expression", Some("30"))
+    });
     case!("函数、常量与百分比", {
         expect_number("sin(PI / 2)", 1.0)?;
         expect_number("200 * 15%", 30.0)?;
@@ -257,6 +263,59 @@ pub fn run() -> i32 {
     });
     case!("花括号空白分隔", {
         expect_list("{680 88  1128  900} / 4", &[170.0, 22.0, 282.0, 225.0])
+    });
+    case!("数组分隔符与结尾逗号", {
+        expect_list("{123, 567, 100}", &[123.0, 567.0, 100.0])?;
+        expect_list("{123, 567, 100,}", &[123.0, 567.0, 100.0])?;
+        expect_list("{123 567 100}", &[123.0, 567.0, 100.0])?;
+        expect_list("[123, 567, 100,]", &[123.0, 567.0, 100.0])?;
+        expect_list("[123 567 100]", &[123.0, 567.0, 100.0])?;
+        expect_list("(123, 567, 100,)", &[123.0, 567.0, 100.0])?;
+        expect_list("(123 567 100)", &[123.0, 567.0, 100.0])
+    });
+    case!("引号数组", {
+        expect_list("\"123 567 100\"", &[123.0, 567.0, 100.0])?;
+        expect_list("'123, 567, 100,'", &[123.0, 567.0, 100.0])?;
+        expect_list("“100 200” / 10", &[10.0, 20.0])?;
+        expect_list("｛1，2，3｝ + (4 5 6)", &[5.0, 7.0, 9.0])?;
+        expect_line_result("数据 = \"1 2 3\"\n数据 * 2", 1, "expression", Some("[2, 4, 6]"))
+    });
+    case!("引号数组行结果", {
+        expect_line_result("\"123 567 100\" / 10", 0, "expression", Some("[12.3, 56.7, 10]"))
+    });
+    case!("引号数组跨行", {
+        expect_types("\"100,\n200\" / 10", &["continuation", "expression"])?;
+        expect_line_result("\"100,\n200\" / 10", 1, "expression", Some("[10, 20]"))?;
+        let content = "数据 = \"100,\n200\"\n数据 / 10";
+        expect_types(content, &["continuation", "assignment", "expression"])?;
+        expect_line_result(content, 2, "expression", Some("[10, 20]"))
+    });
+    case!("引号配对", {
+        let unterminated = render("\"100 200", 4).unwrap_err();
+        if !unterminated.contains("引号未闭合") {
+            return Err(format!("得到 {unterminated}"));
+        }
+        let mismatched = render("'100 200\"", 4).unwrap_err();
+        if !mismatched.contains("引号不匹配") {
+            return Err(format!("得到 {mismatched}"));
+        }
+        Ok(())
+    });
+    case!("圆括号分组与单元素数组", {
+        expect_number("(2 + 3) * 4", 20.0)?;
+        expect_number("(7)", 7.0)?;
+        expect_list("(7,)", &[7.0])
+    });
+    case!("数组中的进制字面量", {
+        expect_list("{0x7B, 0b111}", &[123.0, 7.0])?;
+        expect_list("[0xFF 0b1111]", &[255.0, 15.0])
+    });
+    case!("引号与多赋值、普通文字", {
+        expect_line_result("it's 3", 0, "normal", None)?;
+        expect_list("2 * \"1 2\"", &[2.0, 4.0])?;
+        let content = "a=\"1, 2\", b=3";
+        expect_line_result(content, 0, "assignment", Some("3"))?;
+        expect_scope_list(content, "a", &[1.0, 2.0])
     });
     case!("函数逐元素作用", {
         expect_list("sqrt([1, 4, 9])", &[1.0, 2.0, 3.0])?;

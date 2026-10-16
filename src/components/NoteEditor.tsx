@@ -629,7 +629,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
             }}
           >
             <span className="tick">{showHex ? "✓" : ""}</span>
-            <span className="label">整数结果显示十六进制</span>
+            <span className="label">整数/数组结果显示十六进制</span>
           </button>
           <button
             type="button"
@@ -640,7 +640,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
             }}
           >
             <span className="tick">{showBinary ? "✓" : ""}</span>
-            <span className="label">整数结果显示二进制</span>
+            <span className="label">整数/数组结果显示二进制</span>
           </button>
           <div className="menu-sep" />
           <div className="menu-caption">结果框显示强度</div>
