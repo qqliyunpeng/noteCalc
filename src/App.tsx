@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { FindReplaceBar } from "./components/FindReplaceBar";
 import { HelpPanel } from "./components/HelpPanel";
 import { MenuBar, type MenuDefinition } from "./components/MenuBar";
+import { MenuNumberRow } from "./components/MenuNumberRow";
 import { Modal } from "./components/Modal";
 import { NoteEditor, type EditorHandle } from "./components/NoteEditor";
 import { StatusBar } from "./components/StatusBar";
@@ -26,8 +27,13 @@ import {
   writeDocument,
 } from "./lib/ipc";
 import {
+  BADGE_GAP_STEP,
   BADGE_TONE_LABELS,
   BADGE_TONES,
+  clampBadgeGapChars,
+  DEFAULT_BADGE_GAP_CHARS,
+  MAX_BADGE_GAP_CHARS,
+  MIN_BADGE_GAP_CHARS,
   type BadgeTone,
   type CalcMetadata,
   type SessionState,
@@ -84,6 +90,7 @@ export default function App() {
   const [showHex, setShowHex] = useState(false);
   const [showBinary, setShowBinary] = useState(false);
   const [badgeTone, setBadgeTone] = useState<BadgeTone>("light");
+  const [badgeGapChars, setBadgeGapChars] = useState(DEFAULT_BADGE_GAP_CHARS);
   const [darkMode, setDarkMode] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
@@ -92,7 +99,13 @@ export default function App() {
   const tabsRef = useRef<TabState[]>([]);
   const activeIdRef = useRef("");
   const precisionRef = useRef(4);
-  const settingsRef = useRef({ showHex: false, showBinary: false, badgeTone: "light" as BadgeTone, darkMode: true });
+  const settingsRef = useRef({
+    showHex: false,
+    showBinary: false,
+    badgeTone: "light" as BadgeTone,
+    badgeGapChars: DEFAULT_BADGE_GAP_CHARS,
+    darkMode: true,
+  });
   const editors = useRef(new Map<string, EditorHandle>());
   const recalcTimers = useRef(new Map<string, number>());
   const autosaveTimer = useRef<number | null>(null);
@@ -109,8 +122,8 @@ export default function App() {
     precisionRef.current = precision;
   }, [precision]);
   useEffect(() => {
-    settingsRef.current = { showHex, showBinary, badgeTone, darkMode };
-  }, [showHex, showBinary, badgeTone, darkMode]);
+    settingsRef.current = { showHex, showBinary, badgeTone, badgeGapChars, darkMode };
+  }, [showHex, showBinary, badgeTone, badgeGapChars, darkMode]);
   useEffect(() => {
     modalRef.current = modal;
   }, [modal]);
@@ -131,6 +144,10 @@ export default function App() {
   }, []);
 
   const editorFor = useCallback((id: string) => editors.current.get(id) ?? null, []);
+
+  const updateBadgeGapChars = useCallback((value: number) => {
+    setBadgeGapChars(clampBadgeGapChars(value));
+  }, []);
 
   const patchTab = useCallback((id: string, patch: Partial<TabState>) => {
     setTabs((previous) => previous.map((tab) => (tab.id === id ? { ...tab, ...patch } : tab)));
@@ -201,6 +218,7 @@ export default function App() {
       showHex: settingsRef.current.showHex,
       showBinary: settingsRef.current.showBinary,
       badgeTone: settingsRef.current.badgeTone,
+      badgeGapChars: settingsRef.current.badgeGapChars,
       fontSize: index >= 0 ? current[index].fontSize : DEFAULT_FONT_SIZE,
       darkMode: settingsRef.current.darkMode,
       window: await windowGeometry(),
@@ -244,6 +262,7 @@ export default function App() {
         setShowHex(Boolean(session.showHex));
         setShowBinary(Boolean(session.showBinary));
         setBadgeTone(session.badgeTone ?? "light");
+        setBadgeGapChars(clampBadgeGapChars(session.badgeGapChars));
         setDarkMode(Boolean(session.darkMode));
         const restored: TabState[] = [];
         for (const entry of session.tabs) {
@@ -307,7 +326,7 @@ export default function App() {
       return;
     }
     scheduleAutosave();
-  }, [ready, precision, showHex, showBinary, badgeTone, darkMode, scheduleAutosave]);
+  }, [ready, precision, showHex, showBinary, badgeTone, badgeGapChars, darkMode, scheduleAutosave]);
 
   const lastPrecision = useRef(precision);
   useEffect(() => {
@@ -715,6 +734,20 @@ export default function App() {
             </div>
           ),
         },
+        {
+          kind: "custom",
+          key: "badge-gap",
+          render: () => (
+            <MenuNumberRow
+              label="结果间距（字符）"
+              value={badgeGapChars}
+              min={MIN_BADGE_GAP_CHARS}
+              max={MAX_BADGE_GAP_CHARS}
+              step={BADGE_GAP_STEP}
+              onChange={updateBadgeGapChars}
+            />
+          ),
+        },
         { kind: "separator", key: "edit-4" },
         {
           kind: "action",
@@ -855,6 +888,7 @@ export default function App() {
                     showHex={showHex}
                     showBinary={showBinary}
                     badgeTone={badgeTone}
+                    badgeGapChars={badgeGapChars}
                     onChange={(content) => updateContent(tab.id, content)}
                     onFontSizeChange={(fontSize) => {
                       patchTab(tab.id, { fontSize });
@@ -864,6 +898,7 @@ export default function App() {
                     onToggleHex={setShowHex}
                     onToggleBinary={setShowBinary}
                     onToneChange={setBadgeTone}
+                    onBadgeGapChange={updateBadgeGapChars}
                   />
                   {tab.findOpen ? (
                     <FindReplaceBar

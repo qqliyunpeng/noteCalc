@@ -142,7 +142,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
 - 中文/英文变量与顺序引用；行内多赋值（逗号 / 分号 / 全角分隔符）
 - 数学函数与常量、长度/重量/面积/体积/温度/时间单位换算、等式正确性校验
 - 标题、二级标题、注释行，以及普通文字的自动判定（不认识的文字不报错）
-- 结果以行内虚拟徽标渲染，不写入笔记正文；相邻表达式结果按组对齐
+- 结果以行内虚拟徽标渲染，不写入笔记正文；相邻表达式结果按组对齐，结果到本行最后一个字符的
+  最小距离按字符数可调（单位是字符，随字号一起缩放）
 - 行号、变量/数字/函数/单位/运算符差异化高亮，当前行高亮与成对括号匹配
 - `#` 标题为正文 `+4`、`##` 为 `+2`，蓝色粗体；制表符按 4 字符宽排版，缩放字号后自动同步
 - 单击结果徽标复制纯结果，`Ctrl+Shift+C` 复制光标所在行结果
@@ -152,7 +153,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
 - 类 Notepad++ 多文件标签：标签显示文件名与未保存状态，关闭有修改的标签会提示保存/丢弃/取消
 - 打开文件支持多选，打开/保存/另存为/导出带结果的纯文本
 - 自动恢复上次的全部标签、活动标签、未保存内容、窗口几何与显示设置
-- 深色/浅色主题，可调整显示精度；“编辑”菜单可分别启用整数结果的十六进制和二进制徽标，
+- 深色/浅色主题，可调整显示精度与结果间距（字符数）；“编辑”菜单可分别启用整数结果的十六进制和二进制徽标，
   单击对应徽标即复制该进制值
 - 自绘标题栏（`decorations: false`）跟随窗口焦点与系统配色：accent 一律取自系统（Windows 读注册表
   `ColorPrevalence` / `AccentColor`，macOS 读 `AppleHighlightColor`，Linux 读 GNOME `accent-color`
@@ -194,7 +195,7 @@ sin(PI / 4)
 ## 数据与文件
 
 - 笔记默认保存为 `.ncalc`，也接受 `.txt`；读取按 UTF-8（容忍 BOM），写入 UTF-8、LF 换行
-- 会话（标签、未保存内容、主题、字号、精度、徽标开关、窗口几何）写在
+- 会话（标签、未保存内容、主题、字号、精度、徽标开关、结果间距、窗口几何）写在
   `%APPDATA%\com.localtools.notebookcalc\session.json`，对应 Python 版的 `QSettings`
 - 打开/保存/另存为/导出使用系统文件对话框，全部由 Rust 侧发起；前端没有文件系统权限，
   `src-tauri/capabilities/default.json` 只放窗口控制权限

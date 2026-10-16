@@ -49,6 +49,21 @@ export const BADGE_TONE_LABELS: Record<BadgeTone, string> = {
   standard: "标准",
 };
 
+/**
+ * Smallest allowed gap, in character cells, between a line's last character and
+ * its result badges. Character cells keep the gap tied to the editor grid, so it
+ * scales with the font size like the four-column tab stop does.
+ */
+export const DEFAULT_BADGE_GAP_CHARS = 4;
+export const MIN_BADGE_GAP_CHARS = 0;
+export const MAX_BADGE_GAP_CHARS = 8;
+export const BADGE_GAP_STEP = 1;
+
+export function clampBadgeGapChars(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_BADGE_GAP_CHARS;
+  return Math.min(MAX_BADGE_GAP_CHARS, Math.max(MIN_BADGE_GAP_CHARS, Math.round(value)));
+}
+
 export interface SessionTab {
   path: string | null;
   content: string;
@@ -71,6 +86,7 @@ export interface SessionState {
   showHex: boolean;
   showBinary: boolean;
   badgeTone: BadgeTone;
+  badgeGapChars: number;
   fontSize: number;
   darkMode: boolean;
   window: WindowGeometry | null;
@@ -83,6 +99,7 @@ export const DEFAULT_SESSION: SessionState = {
   showHex: false,
   showBinary: false,
   badgeTone: "light",
+  badgeGapChars: DEFAULT_BADGE_GAP_CHARS,
   fontSize: 13,
   darkMode: true,
   window: null,

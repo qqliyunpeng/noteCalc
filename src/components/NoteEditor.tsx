@@ -19,14 +19,23 @@ import {
   TAB_COLUMNS,
   tabStopWidth,
 } from "../lib/measure";
-import { BADGE_TONE_LABELS, BADGE_TONES, type BadgeTone, type LineResult } from "../lib/types";
+import {
+  BADGE_GAP_STEP,
+  BADGE_TONE_LABELS,
+  BADGE_TONES,
+  clampBadgeGapChars,
+  MAX_BADGE_GAP_CHARS,
+  MIN_BADGE_GAP_CHARS,
+  type BadgeTone,
+  type LineResult,
+} from "../lib/types";
+import { MenuNumberRow } from "./MenuNumberRow";
 
 const PAD_X = 12;
 const PAD_Y = 9;
 const MIN_FONT = 10;
 const MAX_FONT = 38;
 const BADGE_GAP = 6;
-const BADGE_OFFSET = 14;
 
 export interface EditorHandle {
   focus(): void;
@@ -48,12 +57,14 @@ interface NoteEditorProps {
   showHex: boolean;
   showBinary: boolean;
   badgeTone: BadgeTone;
+  badgeGapChars: number;
   onChange(content: string): void;
   onFontSizeChange(fontSize: number): void;
   onCopy(value: string, label: string): void;
   onToggleHex(value: boolean): void;
   onToggleBinary(value: boolean): void;
   onToneChange(tone: BadgeTone): void;
+  onBadgeGapChange(gapChars: number): void;
 }
 
 interface OverlayLineProps {
@@ -230,12 +241,14 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     showHex,
     showBinary,
     badgeTone,
+    badgeGapChars,
     onChange,
     onFontSizeChange,
     onCopy,
     onToggleHex,
     onToggleBinary,
     onToneChange,
+    onBadgeGapChange,
   },
   ref,
 ) {
@@ -262,6 +275,9 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     [fontSize],
   );
   const tabStop = useMemo(() => tabStopWidth(font), [font]);
+  const gapChars = clampBadgeGapChars(badgeGapChars);
+  /** The gap is stored in character cells, so it grows with the font like the tab grid. */
+  const badgeGapPx = useMemo(() => gapChars * measure(" ", font), [gapChars, font]);
   const alignedWidths = useMemo(
     () => computeAlignment(lines, results, font, tabStop),
     [lines, results, font, tabStop],
@@ -295,10 +311,10 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
       if (!result) continue;
       const items = resultBadges(result, showHex, showBinary);
       if (!items.length) continue;
-      rows.push({ line: position, left: PAD_X + alignedWidths[position] + BADGE_OFFSET, items });
+      rows.push({ line: position, left: PAD_X + alignedWidths[position] + badgeGapPx, items });
     }
     return rows;
-  }, [lines, results, showHex, showBinary, alignedWidths]);
+  }, [lines, results, showHex, showBinary, alignedWidths, badgeGapPx]);
 
   const syncScroll = useCallback(() => {
     const textarea = textareaRef.current;
@@ -643,6 +659,16 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
               </button>
             ))}
           </div>
+          <div className="menu-sep" />
+          <div className="menu-caption">结果到本行最后一个字符的最小距离</div>
+          <MenuNumberRow
+            label="结果间距（字符）"
+            value={gapChars}
+            min={MIN_BADGE_GAP_CHARS}
+            max={MAX_BADGE_GAP_CHARS}
+            step={BADGE_GAP_STEP}
+            onChange={onBadgeGapChange}
+          />
         </div>
       ) : null}
     </div>
