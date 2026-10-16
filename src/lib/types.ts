@@ -85,6 +85,7 @@ export interface SessionState {
   precision: number;
   showHex: boolean;
   showBinary: boolean;
+  groupBinary: boolean;
   badgeTone: BadgeTone;
   badgeGapChars: number;
   fontSize: number;
@@ -98,6 +99,7 @@ export const DEFAULT_SESSION: SessionState = {
   precision: 4,
   showHex: false,
   showBinary: false,
+  groupBinary: false,
   badgeTone: "light",
   badgeGapChars: DEFAULT_BADGE_GAP_CHARS,
   fontSize: 13,

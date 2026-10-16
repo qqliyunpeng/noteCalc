@@ -74,6 +74,7 @@ interface NoteEditorProps {
   darkMode: boolean;
   showHex: boolean;
   showBinary: boolean;
+  groupBinary: boolean;
   badgeTone: BadgeTone;
   badgeGapChars: number;
   onChange(content: string): void;
@@ -81,6 +82,7 @@ interface NoteEditorProps {
   onCopy(value: string, label: string): void;
   onToggleHex(value: boolean): void;
   onToggleBinary(value: boolean): void;
+  onToggleGroupBinary(value: boolean): void;
   onToneChange(tone: BadgeTone): void;
   onBadgeGapChange(gapChars: number): void;
 }
@@ -290,6 +292,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     darkMode,
     showHex,
     showBinary,
+    groupBinary,
     badgeTone,
     badgeGapChars,
     onChange,
@@ -297,6 +300,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     onCopy,
     onToggleHex,
     onToggleBinary,
+    onToggleGroupBinary,
     onToneChange,
     onBadgeGapChange,
   },
@@ -360,12 +364,12 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     for (let position = 0; position < lines.length; position += 1) {
       const result = results[position];
       if (!result) continue;
-      const items = resultBadges(result, showHex, showBinary);
+      const items = resultBadges(result, showHex, showBinary, groupBinary);
       if (!items.length) continue;
       rows.push({ line: position, left: PAD_X + alignedWidths[position] + badgeGapPx, items });
     }
     return rows;
-  }, [lines, results, showHex, showBinary, alignedWidths, badgeGapPx]);
+  }, [lines, results, showHex, showBinary, groupBinary, alignedWidths, badgeGapPx]);
 
   const syncScroll = useCallback(() => {
     const textarea = textareaRef.current;
@@ -726,7 +730,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
             }}
           >
             <span className="tick">{showHex ? "✓" : ""}</span>
-            <span className="label">整数/数组结果显示十六进制</span>
+            <span className="label">结果显示十六进制</span>
           </button>
           <button
             type="button"
@@ -737,7 +741,18 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
             }}
           >
             <span className="tick">{showBinary ? "✓" : ""}</span>
-            <span className="label">整数/数组结果显示二进制</span>
+            <span className="label">结果显示二进制</span>
+          </button>
+          <button
+            type="button"
+            className="menu-item"
+            onClick={() => {
+              setMenu(null);
+              onToggleGroupBinary(!groupBinary);
+            }}
+          >
+            <span className="tick">{groupBinary ? "✓" : ""}</span>
+            <span className="label">结果显示二进制（每 4 位分组）</span>
           </button>
           <div className="menu-sep" />
           <div className="menu-caption">结果框显示强度</div>

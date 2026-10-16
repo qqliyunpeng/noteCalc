@@ -82,7 +82,8 @@ export function HelpPanel({ onClose }: HelpPanelProps) {
           <code>0x2D0</code>、<code>0b1010</code>
           <br />
           开启徽标后，整数与整数数组逐个给出十六进制、二进制值；数组沿用自身的括号或引号，
-          复制时一并带上。
+          复制时一并带上。二进制还能按 4 位分组，例如 <code>0b1011 1111</code>，复制出的
+          也是这份带空格的原样文本。
         </p>
         <p>
           <b>常量</b>

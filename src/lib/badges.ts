@@ -16,12 +16,14 @@ export function integerBaseValues(
   value: string | null,
   showHex: boolean,
   showBinary: boolean,
+  groupBinary: boolean,
 ): [string, "hex" | "binary"][] {
   const integers = integerElements(value);
   if (!integers) return [];
   const values: [string, "hex" | "binary"][] = [];
   if (showHex) values.push([restateIntegers(integers, 16), "hex"]);
   if (showBinary) values.push([restateIntegers(integers, 2), "binary"]);
+  if (groupBinary) values.push([restateIntegers(integers, 2, true), "binary"]);
   return values;
 }
 
@@ -46,18 +48,35 @@ const LIST_DELIMITERS: [string, string][] = [
 ];
 
 /** `[0x7B, 0x237]` / `"0x7B 0x237"` — the delimiters of the array restated. */
-function restateIntegers(integers: IntegerVector, radix: 16 | 2): string {
+function restateIntegers(integers: IntegerVector, radix: 16 | 2, groupBinary = false): string {
   const text = integers.numbers
-    .map((number) => baseText(number, radix))
+    .map((number) => baseText(number, radix, groupBinary))
     .join(integers.separator);
   return `${integers.open}${text}${integers.close}`;
 }
 
-/** `-0x7B` / `0b1010`, the same shapes the Python badges printed. */
-function baseText(value: number, radix: 16 | 2): string {
+/** Digits per group in the grouped binary badge, counted from the right. */
+export const BINARY_GROUP_SIZE = 4;
+
+/**
+ * `-0x7B` / `0b1010`, the same shapes the Python badges printed. Grouped binary
+ * spaces the digits every four, so `0b10111111` reads `0b1011 1111`; the badge
+ * copies that same spaced text.
+ */
+function baseText(value: number, radix: 16 | 2, groupBinary = false): string {
   const digits = Math.abs(value).toString(radix);
-  const text = radix === 16 ? digits.toUpperCase() : digits;
+  let text = radix === 16 ? digits.toUpperCase() : digits;
+  if (radix === 2 && groupBinary) text = groupBinaryDigits(text);
   return `${value < 0 ? "-" : ""}0${radix === 16 ? "x" : "b"}${text}`;
+}
+
+/** `10111111` → `1011 1111`; the groups count from the right, like bit columns. */
+function groupBinaryDigits(digits: string): string {
+  const groups: string[] = [];
+  for (let end = digits.length; end > 0; end -= BINARY_GROUP_SIZE) {
+    groups.unshift(digits.slice(Math.max(0, end - BINARY_GROUP_SIZE), end));
+  }
+  return groups.join(" ");
 }
 
 /**
@@ -96,6 +115,7 @@ export function resultBadges(
   result: LineResult,
   showHex: boolean,
   showBinary: boolean,
+  groupBinary: boolean,
 ): Badge[] {
   const label = resultText(result);
   if (!label) return [];
@@ -105,7 +125,7 @@ export function resultBadges(
       : null;
   const badges: Badge[] = [{ label, copyValue, kind: "primary" }];
   if (copyValue !== null) {
-    for (const [value, kind] of integerBaseValues(copyValue, showHex, showBinary)) {
+    for (const [value, kind] of integerBaseValues(copyValue, showHex, showBinary, groupBinary)) {
       badges.push({ label: value, copyValue: value, kind });
     }
   }

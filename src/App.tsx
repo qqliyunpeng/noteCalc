@@ -90,6 +90,7 @@ export default function App() {
   const [precision, setPrecision] = useState(4);
   const [showHex, setShowHex] = useState(false);
   const [showBinary, setShowBinary] = useState(false);
+  const [groupBinary, setGroupBinary] = useState(false);
   const [badgeTone, setBadgeTone] = useState<BadgeTone>("light");
   const [badgeGapChars, setBadgeGapChars] = useState(DEFAULT_BADGE_GAP_CHARS);
   const [darkMode, setDarkMode] = useState(true);
@@ -103,6 +104,7 @@ export default function App() {
   const settingsRef = useRef({
     showHex: false,
     showBinary: false,
+    groupBinary: false,
     badgeTone: "light" as BadgeTone,
     badgeGapChars: DEFAULT_BADGE_GAP_CHARS,
     darkMode: true,
@@ -123,8 +125,8 @@ export default function App() {
     precisionRef.current = precision;
   }, [precision]);
   useEffect(() => {
-    settingsRef.current = { showHex, showBinary, badgeTone, badgeGapChars, darkMode };
-  }, [showHex, showBinary, badgeTone, badgeGapChars, darkMode]);
+    settingsRef.current = { showHex, showBinary, groupBinary, badgeTone, badgeGapChars, darkMode };
+  }, [showHex, showBinary, groupBinary, badgeTone, badgeGapChars, darkMode]);
   useEffect(() => {
     modalRef.current = modal;
   }, [modal]);
@@ -232,6 +234,7 @@ export default function App() {
       precision: precisionRef.current,
       showHex: settingsRef.current.showHex,
       showBinary: settingsRef.current.showBinary,
+      groupBinary: settingsRef.current.groupBinary,
       badgeTone: settingsRef.current.badgeTone,
       badgeGapChars: settingsRef.current.badgeGapChars,
       fontSize: index >= 0 ? current[index].fontSize : DEFAULT_FONT_SIZE,
@@ -276,6 +279,7 @@ export default function App() {
         setPrecision(session.precision ?? 4);
         setShowHex(Boolean(session.showHex));
         setShowBinary(Boolean(session.showBinary));
+        setGroupBinary(Boolean(session.groupBinary));
         setBadgeTone(session.badgeTone ?? "light");
         setBadgeGapChars(clampBadgeGapChars(session.badgeGapChars));
         setDarkMode(Boolean(session.darkMode));
@@ -341,7 +345,17 @@ export default function App() {
       return;
     }
     scheduleAutosave();
-  }, [ready, precision, showHex, showBinary, badgeTone, badgeGapChars, darkMode, scheduleAutosave]);
+  }, [
+    ready,
+    precision,
+    showHex,
+    showBinary,
+    groupBinary,
+    badgeTone,
+    badgeGapChars,
+    darkMode,
+    scheduleAutosave,
+  ]);
 
   const lastPrecision = useRef(precision);
   useEffect(() => {
@@ -766,15 +780,21 @@ export default function App() {
         { kind: "separator", key: "edit-4" },
         {
           kind: "action",
-          label: "整数/数组结果显示十六进制",
+          label: "结果显示十六进制",
           checked: showHex,
           onSelect: () => setShowHex((value) => !value),
         },
         {
           kind: "action",
-          label: "整数/数组结果显示二进制",
+          label: "结果显示二进制",
           checked: showBinary,
           onSelect: () => setShowBinary((value) => !value),
+        },
+        {
+          kind: "action",
+          label: "结果显示二进制（每 4 位分组）",
+          checked: groupBinary,
+          onSelect: () => setGroupBinary((value) => !value),
         },
       ],
     },
@@ -902,6 +922,7 @@ export default function App() {
                     darkMode={darkMode}
                     showHex={showHex}
                     showBinary={showBinary}
+                    groupBinary={groupBinary}
                     badgeTone={badgeTone}
                     badgeGapChars={badgeGapChars}
                     onChange={(content) => updateContent(tab.id, content)}
@@ -912,6 +933,7 @@ export default function App() {
                     onCopy={(value, label) => void copyValue(value, label)}
                     onToggleHex={setShowHex}
                     onToggleBinary={setShowBinary}
+                    onToggleGroupBinary={setGroupBinary}
                     onToneChange={setBadgeTone}
                     onBadgeGapChange={updateBadgeGapChars}
                   />

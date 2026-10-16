@@ -32,6 +32,8 @@ pub struct SessionState {
     pub precision: u32,
     pub show_hex: bool,
     pub show_binary: bool,
+    /// Binary badges with a space every four digits, e.g. `0b1011 1111`.
+    pub group_binary: bool,
     pub badge_tone: String,
     /// Minimum gap between a line's last character and its badges, in character cells.
     pub badge_gap_chars: f64,
@@ -48,6 +50,7 @@ impl Default for SessionState {
             precision: 4,
             show_hex: false,
             show_binary: false,
+            group_binary: false,
             badge_tone: "light".to_string(),
             badge_gap_chars: 4.0,
             font_size: 11.0,
@@ -94,6 +97,21 @@ mod tests {
             "badgeTone":"light","badgeGap":14,"fontSize":15.0,"darkMode":true,"window":null}"#;
         let state: SessionState = serde_json::from_str(stale).expect("stale session parses");
         assert_eq!(state.badge_gap_chars, 4.0);
+    }
+
+    #[test]
+    fn group_binary_defaults_to_off_and_is_stored_as_camel_case() {
+        let legacy = r#"{"tabs":[],"activeTab":0,"precision":4,"showHex":false,"showBinary":false,
+            "badgeTone":"light","fontSize":15.0,"darkMode":true,"window":null}"#;
+        let state: SessionState = serde_json::from_str(legacy).expect("legacy session parses");
+        assert!(!state.group_binary);
+
+        let state = SessionState {
+            group_binary: true,
+            ..SessionState::default()
+        };
+        let raw = serde_json::to_string(&state).expect("session serialises");
+        assert!(raw.contains(r#""groupBinary":true"#));
     }
 
     #[test]

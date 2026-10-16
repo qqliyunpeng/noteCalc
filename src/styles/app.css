@@ -313,7 +313,8 @@ input {
   top: calc(100% + 4px);
   left: 0;
   z-index: 30;
-  min-width: 236px;
+  /* Wide enough for the longest label,「结果显示二进制（每 4 位分组）」. */
+  min-width: 246px;
   padding: 5px;
   background: var(--panel);
   border: 1px solid var(--line-strong);

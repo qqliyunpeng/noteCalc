@@ -171,7 +171,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
 - 打开文件支持多选，打开/保存/另存为/导出带结果的纯文本
 - 自动恢复上次的全部标签、活动标签、未保存内容、窗口几何与显示设置
 - 深色/浅色主题，可调整显示精度与结果间距（字符数）；“编辑”菜单可分别启用整数结果的十六进制和
-  二进制徽标（整数数组按元素逐个给出、沿用数组自身的括号或引号），单击对应徽标即复制该进制值
+  二进制徽标（整数数组按元素逐个给出、沿用数组自身的括号或引号），二进制还可按 4 位分组显示成
+  `0b1011 1111`；单击对应徽标即复制该进制值，复制出的二进制带着分组空格
 - 自绘标题栏（`decorations: false`）跟随窗口焦点与系统配色：accent 一律取自系统（Windows 读注册表
   `ColorPrevalence` / `AccentColor`，macOS 读 `AppleHighlightColor`，Linux 读 GNOME `accent-color`
   / KDE `AccentColor`），用于描边；只有 Windows 打开“在标题栏和窗口边框上显示强调色”时才像原生窗口
