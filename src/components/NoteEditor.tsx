@@ -37,6 +37,24 @@ const MIN_FONT = 10;
 const MAX_FONT = 38;
 const BADGE_GAP = 6;
 
+/**
+ * Pairs that enclose a selection when the character is typed over one. Both
+ * halves of a bracket pair are listed, so typing `)` over a selection wraps it
+ * just like `(` (the way IntelliJ's smart brace handling does); the symmetric
+ * quotes pair with themselves.
+ */
+const WRAP_PAIRS: Record<string, [string, string]> = {
+  "(": ["(", ")"],
+  ")": ["(", ")"],
+  "[": ["[", "]"],
+  "]": ["[", "]"],
+  "{": ["{", "}"],
+  "}": ["{", "}"],
+  "'": ["'", "'"],
+  '"': ['"', '"'],
+  "`": ["`", "`"],
+};
+
 export interface EditorHandle {
   focus(): void;
   select(start: number, end: number): void;
@@ -289,6 +307,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
   const gutterRef = useRef<HTMLDivElement | null>(null);
   const badgeLayerRef = useRef<HTMLDivElement | null>(null);
   const pendingCaret = useRef<number | null>(null);
+  const pendingSelection = useRef<[number, number] | null>(null);
   const [caret, setCaret] = useState({ offset: 0, line: 0 });
   const [dismissed, setDismissed] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -373,12 +392,15 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
   }, [syncScroll, content, stride, fontSize]);
 
   useLayoutEffect(() => {
-    const caretOffset = pendingCaret.current;
     const textarea = textareaRef.current;
-    if (caretOffset === null || !textarea) return;
+    const caretOffset = pendingCaret.current;
+    const selection = pendingSelection.current;
+    if (!textarea || (caretOffset === null && !selection)) return;
     pendingCaret.current = null;
-    textarea.setSelectionRange(caretOffset, caretOffset);
-    setCaret({ offset: caretOffset, line: locateLine(computeLineStarts(textarea.value), caretOffset) });
+    pendingSelection.current = null;
+    const [start, end] = selection ?? [caretOffset as number, caretOffset as number];
+    textarea.setSelectionRange(start, end);
+    setCaret({ offset: start, line: locateLine(computeLineStarts(textarea.value), start) });
   }, [content]);
 
   const insertText = useCallback(
@@ -399,6 +421,36 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
       onChange(`${content.slice(0, start)}${text}${content.slice(end)}`);
     },
     [content, onChange],
+  );
+
+  /**
+   * Encloses the selection in the pair the typed character belongs to. The
+   * selection itself is kept, so picking another character still replaces the
+   * text and a second bracket nests one more pair around it.
+   */
+  const wrapSelection = useCallback(
+    (key: string): boolean => {
+      const pair = WRAP_PAIRS[key];
+      const textarea = textareaRef.current;
+      if (!pair || !textarea) return false;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      if (start === end) return false;
+      const inner = end - start;
+      const wrapped = `${pair[0]}${textarea.value.slice(start, end)}${pair[1]}`;
+      pendingSelection.current = [start + pair[0].length, start + pair[0].length + inner];
+      // Inserting through the editor command keeps the whole wrap as one undo
+      // step, exactly like `insertText`; a manual splice is the fallback for
+      // when the command refuses or drops the selection's line breaks.
+      const next = `${textarea.value.slice(0, start)}${wrapped}${textarea.value.slice(end)}`;
+      if (document.execCommand("insertText", false, wrapped) && textarea.value === next) {
+        onChange(textarea.value);
+        return true;
+      }
+      onChange(next);
+      return true;
+    },
+    [onChange],
   );
 
   const forwardWheel = useCallback(
@@ -515,6 +567,19 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     // `editor_widget.py` accepts a completion with Tab or Right (no modifiers);
     // Tab still indents by a tab stop when there is nothing to accept.
     const plainKey = !event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey;
+    // A bracket or quote typed over a selection encloses it instead of wiping
+    // it. Shift stays allowed because `(` and `"` sit behind it on most
+    // layouts; an empty selection keeps the plain browser behaviour.
+    if (
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      !event.nativeEvent.isComposing &&
+      wrapSelection(event.key)
+    ) {
+      event.preventDefault();
+      return;
+    }
     if (completion && plainKey && (event.key === "Tab" || event.key === "ArrowRight")) {
       event.preventDefault();
       insertText(` ${completion}`);

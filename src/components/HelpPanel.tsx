@@ -108,6 +108,8 @@ export function HelpPanel({ onClose }: HelpPanelProps) {
           <code>Ctrl+鼠标滚轮</code> 缩放字号
           <br />
           <code>Tab</code> 接受结果补全
+          <br />
+          <code>{`( [ { ' " \``}</code> 选中后成对包住
         </p>
       </div>
     </aside>
