@@ -21,6 +21,10 @@ tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
+[target.'cfg(windows)'.dependencies]
+# Only for the caption accent (`theme`): the webview cannot read the registry.
+windows-sys = { version = "0.61", features = ["Win32_System_Registry"] }
+
 [profile.release]
 codegen-units = 1
 lto = true

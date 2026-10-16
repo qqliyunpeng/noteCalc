@@ -154,6 +154,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
 - 自动恢复上次的全部标签、活动标签、未保存内容、窗口几何与显示设置
 - 深色/浅色主题，可调整显示精度；“编辑”菜单可分别启用整数结果的十六进制和二进制徽标，
   单击对应徽标即复制该进制值
+- 自绘标题栏（`decorations: false`）跟随窗口焦点与系统配色：accent 一律取自系统（Windows 读注册表
+  `ColorPrevalence` / `AccentColor`，macOS 读 `AppleHighlightColor`，Linux 读 GNOME `accent-color`
+  / KDE `AccentColor`），用于描边；只有 Windows 打开“在标题栏和窗口边框上显示强调色”时才像原生窗口
+  那样整条填充 accent，文字色按 accent 亮度取黑或白。macOS 与 Linux 的原生标题栏本就是中性色，因此
+  只用 accent 描边；系统给不出颜色时退回内置配色，切到后台一律降调
 
 快捷键：`Ctrl+N` 新建、`Ctrl+O` 打开、`Ctrl+S` 保存、`Ctrl+Shift+S` 另存为、`Ctrl+F` 查找、
 `Ctrl+H` 替换、`Ctrl+Shift+D` 切换主题、`F1` 语法帮助。
@@ -205,6 +210,7 @@ src/                    前端（React）
 src-tauri/src/
   calc/                 Rust 计算引擎（units / value / parser / eval / document / selfcheck）
   session.rs            会话读写
+  theme.rs              系统标题栏配色（Windows 注册表 / macOS defaults / GNOME·KDE 设置）
   lib.rs                Tauri 命令：evaluate、calc_metadata、文件读写、导出、会话
 ```
 

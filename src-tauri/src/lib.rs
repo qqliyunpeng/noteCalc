@@ -6,6 +6,7 @@
 
 mod calc;
 mod session;
+mod theme;
 
 use std::path::{Path, PathBuf};
 
@@ -244,6 +245,7 @@ pub fn run() {
             export_results,
             load_session,
             save_session,
+            theme::system_caption,
         ])
         .setup(|app| {
             // The window starts hidden (see tauri.conf.json) so restored

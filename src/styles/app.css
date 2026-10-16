@@ -87,7 +87,11 @@ input {
   display: flex;
   align-items: stretch;
   border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel) 74%, transparent);
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  /* The hairline shows the desktop's accent where it exposes one. */
+  box-shadow: inset 0 1px 0
+    color-mix(in srgb, var(--titlebar-accent, var(--accent)) 32%, transparent);
+  transition: background var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease);
 }
 
 .titlebar .drag {
@@ -174,6 +178,94 @@ input {
 .win-btns button.close:hover {
   background: var(--danger);
   color: #fff;
+}
+
+/*
+ * The OS no longer draws a caption (`decorations: false`), including the part
+ * it did for free: an active window keeps full contrast, a background one steps
+ * back. Windows, macOS and the GTK/KDE themes all make that swap, so mirror it —
+ * accent hairline and full-strength labels while focused, muted while not.
+ */
+.titlebar .mark,
+.titlebar .name,
+.titlebar .doc,
+.dirty-dot,
+.chip {
+  transition: color var(--t-base) var(--ease), border-color var(--t-base) var(--ease),
+    background var(--t-base) var(--ease), opacity var(--t-base) var(--ease);
+}
+
+.titlebar[data-focused="false"] {
+  background: color-mix(in srgb, var(--panel) 30%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--line) 60%, transparent);
+  box-shadow: inset 0 1px 0 transparent;
+}
+
+/* Dimming through opacity keeps the hover colour of the close button intact. */
+.titlebar[data-focused="false"] .mark,
+.titlebar[data-focused="false"] .name {
+  color: var(--ink-3);
+}
+
+.titlebar[data-focused="false"] .win-btns {
+  opacity: 0.55;
+}
+
+.titlebar[data-focused="false"] .doc {
+  color: var(--ink-2);
+  border-left-color: color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+.titlebar[data-focused="false"] .dirty-dot {
+  background: var(--ink-3);
+}
+
+.titlebar[data-focused="false"] .chip {
+  opacity: 0.55;
+}
+
+/*
+ * A focused caption takes the colours the desktop reported for it — Windows on
+ * "show accent colour on title bars and window borders" — plus the ink the
+ * backend picked for contrast. Nothing here is a fixed colour: both come from
+ * `system_caption`. macOS and Linux keep their captions neutral, so they report
+ * no fill and only the hairline above takes their accent.
+ */
+.titlebar[data-caption="accent"][data-focused="true"] {
+  background: var(--caption-bg);
+  border-bottom-color: color-mix(in srgb, var(--caption-ink) 22%, var(--caption-bg));
+  box-shadow: none;
+}
+
+.titlebar[data-caption="accent"][data-focused="true"] .mark,
+.titlebar[data-caption="accent"][data-focused="true"] .name,
+.titlebar[data-caption="accent"][data-focused="true"] .doc,
+.titlebar[data-caption="accent"][data-focused="true"] .win-btns button {
+  color: var(--caption-ink);
+}
+
+.titlebar[data-caption="accent"][data-focused="true"] .doc {
+  border-left-color: color-mix(in srgb, var(--caption-ink) 32%, transparent);
+}
+
+.titlebar[data-caption="accent"][data-focused="true"] .dirty-dot {
+  background: var(--caption-ink);
+}
+
+.titlebar[data-caption="accent"][data-focused="true"] .chip {
+  color: var(--caption-ink);
+  border-color: color-mix(in srgb, var(--caption-ink) 45%, transparent);
+}
+
+/* Close keeps the hover the app gives it in every other mode. */
+.titlebar[data-caption="accent"][data-focused="true"] .win-btns button:not(.close):hover {
+  background: color-mix(in srgb, var(--caption-ink) 16%, transparent);
+  color: var(--caption-ink);
+}
+
+.titlebar[data-caption="accent"][data-focused="true"] .win-btns button.close:hover {
+  background: var(--danger);
+  color: var(--accent-ink);
 }
 
 /* --------------------------------- menubar -------------------------------- */

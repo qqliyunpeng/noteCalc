@@ -88,6 +88,75 @@ export async function isWindowMaximized(): Promise<boolean> {
   return getCurrentWindow().isMaximized();
 }
 
+export interface CaptionColours {
+  /** `#rrggbb` the focused caption is filled with. */
+  background: string;
+  /** `#rrggbb` text and icons on that fill. */
+  foreground: string;
+}
+
+export interface SystemCaption {
+  /** `#rrggbb` accent the desktop exposes, when it has one. */
+  accent: string | null;
+  /**
+   * Fill the desktop gives a focused caption. Only Windows fills one, and only
+   * while "show accent colour on title bars and window borders" is on; the
+   * other desktops keep captions neutral and report `null` here.
+   */
+  caption: CaptionColours | null;
+}
+
+/** No colours from the desktop — the title bar keeps the app's own. */
+export const NO_SYSTEM_CAPTION: SystemCaption = { accent: null, caption: null };
+
+/**
+ * The colours the desktop gives a focused caption, and its accent.
+ *
+ * Each platform is asked in its own place (Windows registry, macOS defaults,
+ * GNOME/KDE settings). A desktop that exposes none, and a backend that cannot
+ * answer at all, are not errors — the title bar then keeps the app's own
+ * colours.
+ */
+export async function fetchSystemCaption(): Promise<SystemCaption> {
+  if (!isTauri) return NO_SYSTEM_CAPTION;
+  try {
+    return await invoke<SystemCaption>("system_caption");
+  } catch {
+    return NO_SYSTEM_CAPTION;
+  }
+}
+
+/** Whether the window currently holds OS focus. */
+export async function isWindowFocused(): Promise<boolean> {
+  if (!isTauri) return document.hasFocus();
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  return getCurrentWindow().isFocused();
+}
+
+/**
+ * Report every OS focus change, so the self-drawn title bar can mirror the
+ * active/inactive caption that `decorations: false` took away.
+ *
+ * The listener only fires on changes, and the window is already focused by the
+ * time the UI mounts, so pair it with `isWindowFocused()` for the first read.
+ */
+export async function onWindowFocusChanged(
+  handler: (focused: boolean) => void,
+): Promise<() => void> {
+  if (!isTauri) {
+    const focus = () => handler(true);
+    const blur = () => handler(false);
+    window.addEventListener("focus", focus);
+    window.addEventListener("blur", blur);
+    return () => {
+      window.removeEventListener("focus", focus);
+      window.removeEventListener("blur", blur);
+    };
+  }
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  return getCurrentWindow().onFocusChanged(({ payload }) => handler(payload));
+}
+
 /**
  * Window size and position for session restore.
  *
