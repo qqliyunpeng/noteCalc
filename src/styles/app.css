@@ -62,7 +62,10 @@ input {
 
 .app {
   display: grid;
-  grid-template-rows: 38px auto minmax(0, 1fr) 26px;
+  /* The title row is the caption the desktop gives its own windows and the menu
+     strip is its menu bar, both set from `metrics.rs`; this is the app's size at
+     100%, which is what a browser preview keeps. */
+  grid-template-rows: var(--titlebar-h, 38px) auto minmax(0, 1fr) 26px;
   height: 100%;
   background-image: var(--bg-grain);
   background-attachment: fixed;
@@ -270,12 +273,18 @@ input {
 
 /* --------------------------------- menubar -------------------------------- */
 
+/*
+ * The desktop decides how tall a menu bar is, so the strip asks for its size
+ * (`--menubar-h` / `--menu-font-size`, set on the root from
+ * `metrics::chrome_metrics`) and keeps this one when there is no answer: a
+ * browser preview, or a desktop that exposes nothing to read.
+ */
 .menubar {
   display: flex;
   align-items: stretch;
   gap: 2px;
   padding: 0 8px;
-  height: 30px;
+  height: var(--menubar-h, 30px);
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel) 60%, transparent);
 }
@@ -287,7 +296,7 @@ input {
 
 .menu-title {
   padding: 0 12px;
-  font-size: 12.5px;
+  font-size: var(--menu-font-size, 12.5px);
   color: var(--ink-2);
   border-radius: var(--r-sm);
   transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
@@ -451,8 +460,9 @@ input {
   display: flex;
   align-items: flex-end;
   gap: 6px;
-  height: 34px;
-  padding: 5px 8px 0;
+  /* One tab, lifted off the hairline by the padding above it. */
+  height: calc(var(--tab-h, 29px) + 4px);
+  padding: 3px 8px 0;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel) 46%, transparent);
 }
@@ -471,7 +481,7 @@ input {
   align-items: center;
   gap: 7px;
   max-width: 200px;
-  height: 29px;
+  height: var(--tab-h, 29px);
   padding: 0 8px 0 11px;
   border: 1px solid transparent;
   border-bottom: 0;
@@ -536,9 +546,8 @@ input {
   flex: none;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  margin-bottom: 2px;
+  width: var(--tab-h, 29px);
+  height: var(--tab-h, 29px);
   border-radius: var(--r-sm);
   color: var(--ink-3);
 }

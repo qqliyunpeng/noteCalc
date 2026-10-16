@@ -14,6 +14,7 @@ import { buildIndex } from "./lib/highlight";
 import {
   evaluate,
   exportResults as exportResultsCommand,
+  fetchChromeMetrics,
   fetchMetadata,
   isTauri,
   loadSession,
@@ -130,6 +131,20 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
   }, [darkMode]);
+  useEffect(() => {
+    // The window chrome is self-drawn, so its sizes have to be asked for rather
+    // than inherited (see `metrics.rs`). Until the answer arrives — and in a
+    // browser preview, where there is none — the stylesheet's own sizes stand.
+    void fetchChromeMetrics().then((chrome) => {
+      if (!chrome) return;
+      const root = document.documentElement;
+      root.dataset.chrome = chrome.measured ? "system" : "platform";
+      root.style.setProperty("--titlebar-h", `${chrome.titleHeight}px`);
+      root.style.setProperty("--menubar-h", `${chrome.menuHeight}px`);
+      root.style.setProperty("--menu-font-size", `${chrome.menuFontSize}px`);
+      root.style.setProperty("--tab-h", `${chrome.tabHeight}px`);
+    });
+  }, []);
 
   const activeTab = useMemo(
     () => tabs.find((tab) => tab.id === activeId) ?? tabs[0],

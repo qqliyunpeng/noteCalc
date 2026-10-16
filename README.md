@@ -177,6 +177,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
   / KDE `AccentColor`），用于描边；只有 Windows 打开“在标题栏和窗口边框上显示强调色”时才像原生窗口
   那样整条填充 accent，文字色按 accent 亮度取黑或白。macOS 与 Linux 的原生标题栏本就是中性色，因此
   只用 accent 描边；系统给不出颜色时退回内置配色，切到后台一律降调
+- 标题栏、菜单栏与标签栏的高度也取自系统：Windows 读系统给标准窗口预留的标题栏高度、`SM_CYMENU`
+  与菜单字体、以及 `SM_CYSMSIZE`（都按窗口 DPI 折算回 CSS 逻辑像素，所以 100%、125%、150% 缩放下
+  都是同一档观感），macOS 与 Linux 窗口内没有这些东西可量，用各自桌面的惯例值；读不到就用样式表
+  自带的值（浏览器预览走的就是这一档）
 
 快捷键：`Ctrl+N` 新建、`Ctrl+O` 打开、`Ctrl+S` 保存、`Ctrl+Shift+S` 另存为、`Ctrl+F` 查找、
 `Ctrl+H` 替换、`Ctrl+Shift+D` 切换主题、`F1` 语法帮助。
@@ -228,8 +232,9 @@ src/                    前端（React）
 src-tauri/src/
   calc/                 Rust 计算引擎（units / value / parser / eval / document / selfcheck）
   session.rs            会话读写
+  metrics.rs            窗口度量（Windows 读标题栏·SM_CYMENU·SM_CYSMSIZE 与菜单字体；macOS·Linux 用惯例值）
   theme.rs              系统标题栏配色（Windows 注册表 / macOS defaults / GNOME·KDE 设置）
-  lib.rs                Tauri 命令：evaluate、calc_metadata、文件读写、导出、会话
+  lib.rs                Tauri 命令：evaluate、calc_metadata、文件读写、导出、会话、窗口度量
 ```
 
 引擎不依赖第三方库（早期版本用过的 `regex` 已改为手写匹配），前端只用 React，

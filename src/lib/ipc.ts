@@ -109,6 +109,42 @@ export interface SystemCaption {
 /** No colours from the desktop — the title bar keeps the app's own. */
 export const NO_SYSTEM_CAPTION: SystemCaption = { accent: null, caption: null };
 
+export interface ChromeMetrics {
+  /** Height of the self-drawn title bar, in logical CSS pixels. */
+  titleHeight: number;
+  /** Row height of the self-drawn menu strip, in logical CSS pixels. */
+  menuHeight: number;
+  /** Label size inside that strip, in logical CSS pixels. */
+  menuFontSize: number;
+  /** Height of one tab in the self-drawn tab strip, in logical CSS pixels. */
+  tabHeight: number;
+  /**
+   * `true` when the desktop measured these values (Windows reads the frame it
+   * keeps for a caption, `SM_CYMENU` with its menu font, and `SM_CYSMSIZE` for a
+   * tab); `false` when they are the app's value for a desktop that draws its
+   * window chrome elsewhere (macOS keeps menus in the bar along the top of the
+   * screen, Linux leaves titles and menu bars to the toolkit each desktop
+   * picked).
+   */
+  measured: boolean;
+}
+
+/**
+ * What the desktop sizes its own window chrome to, so the self-drawn title bar,
+ * menu strip and tabs land where a native window's would.
+ *
+ * `null` when the backend cannot answer (browser preview): every row then keeps
+ * the size its stylesheet gives it.
+ */
+export async function fetchChromeMetrics(): Promise<ChromeMetrics | null> {
+  if (!isTauri) return null;
+  try {
+    return await invoke<ChromeMetrics>("chrome_metrics");
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The colours the desktop gives a focused caption, and its accent.
  *

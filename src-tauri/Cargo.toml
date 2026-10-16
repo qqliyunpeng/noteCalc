@@ -22,8 +22,14 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [target.'cfg(windows)'.dependencies]
-# Only for the caption accent (`theme`): the webview cannot read the registry.
-windows-sys = { version = "0.61", features = ["Win32_System_Registry"] }
+# For the parts of the desktop a webview cannot read on its own: the caption
+# accent (`theme`) and the window chrome metrics (`metrics`).
+windows-sys = { version = "0.61", features = [
+  "Win32_Graphics_Gdi",
+  "Win32_System_Registry",
+  "Win32_UI_HiDpi",
+  "Win32_UI_WindowsAndMessaging",
+] }
 
 [profile.release]
 codegen-units = 1

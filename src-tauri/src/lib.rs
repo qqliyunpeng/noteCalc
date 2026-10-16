@@ -5,6 +5,7 @@
 //! too, which keeps the frontend free of filesystem endpoints.
 
 mod calc;
+mod metrics;
 mod session;
 mod theme;
 
@@ -184,6 +185,13 @@ fn save_session(app: AppHandle, session: session::SessionState) -> Result<(), St
     session::save(&app, &session)
 }
 
+#[tauri::command]
+fn chrome_metrics(window: tauri::WebviewWindow) -> metrics::ChromeMetrics {
+    // The desktop answers per DPI: the window's own scale decides the sizes and
+    // then brings them back to the logical pixels the webview lays out in.
+    metrics::chrome_metrics(window.scale_factor().unwrap_or(1.0))
+}
+
 fn apply_window_geometry(app: &AppHandle) {
     let Some(geometry) = session::load(app).and_then(|state| state.window) else {
         return;
@@ -245,6 +253,7 @@ pub fn run() {
             export_results,
             load_session,
             save_session,
+            chrome_metrics,
             theme::system_caption,
         ])
         .setup(|app| {
