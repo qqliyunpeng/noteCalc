@@ -1,8 +1,11 @@
 @echo off
-rem noteCalc 启动脚本：双击即运行 release 版，参数会透传给 scripts\run.ps1
-rem   run.bat -Rebuild   先重新构建再启动
-rem   run.bat -Dev       开发模式（等价 pnpm tauri dev）
-rem   run.bat -Check     只跑计算引擎自检，不开窗口
+rem noteCalc 启动脚本：双击即运行 release 版
+rem   产物不存在、或源码比产物新时会先自动重新构建，所以双击总能拿到最新版
+rem   参数会透传给 scripts\run.ps1：
+rem   run.bat -Rebuild    无条件重新构建后再启动
+rem   run.bat -Dev        开发模式（等价 pnpm tauri dev）
+rem   run.bat -Check      只跑计算引擎自检，不开窗口
+rem   run.bat -SkipBuild  跳过自动构建，直接开现有产物
 setlocal
 chcp 65001 >nul
 cd /d "%~dp0"

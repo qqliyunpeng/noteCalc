@@ -3,7 +3,8 @@
     启动 noteCalc（release 二进制），需要时先构建。
 
 .DESCRIPTION
-    默认直接启动 src-tauri\target\release\notecalc.exe；产物不存在就自动构建一次。
+    默认直接启动 src-tauri\target\release\notecalc.exe；产物不存在、或源码比产物新就自动构建一次
+    （双击 run.bat 走的就是这条路，不用记参数）。
     本机构建依赖 MinGW 的链接器绕行方案（.cargo\config.toml，见 README），
     若该文件缺失，脚本会先跑 scripts\setup-linker.ps1 生成它。
 
@@ -19,6 +20,9 @@
 .PARAMETER Check
     只跑计算引擎自检（notecalc.exe --check）后退出，不开窗口；退出码 0 表示全部通过。
 
+.PARAMETER SkipBuild
+    跳过自动构建，直接用现有产物启动（想马上开旧版、不想等编译时用）。
+
 .EXAMPLE
     pnpm start
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run.ps1 -Rebuild
@@ -28,7 +32,8 @@
 param(
     [switch] $Rebuild,
     [switch] $Dev,
-    [switch] $Check
+    [switch] $Check,
+    [switch] $SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -56,8 +61,25 @@ function Build-Release {
         Write-Host '未找到 .cargo\config.toml，先执行 scripts\setup-linker.ps1……'
         & (Join-Path $PSScriptRoot 'setup-linker.ps1')
     }
-    Write-Host '正在构建（pnpm tauri build）……'
+    Write-Host '正在构建（pnpm tauri build，首次或改动大时要几分钟）……'
     Invoke-Pnpm @('tauri', 'build')
+}
+
+function Get-NewestSource {
+    Get-ChildItem (Join-Path $root 'src'), (Join-Path $root 'src-tauri\src') -Recurse -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+}
+
+function Read-Yes {
+    param([string] $Prompt, [bool] $Default = $true)
+
+    try {
+        $answer = Read-Host -Prompt $Prompt
+    } catch {
+        return $Default
+    }
+    if ([string]::IsNullOrWhiteSpace($answer)) { return $Default }
+    return $answer.Trim() -match '^(y|yes|是)$'
 }
 
 if ($Dev) {
@@ -65,10 +87,22 @@ if ($Dev) {
     exit 0
 }
 
-if ($Rebuild -or -not (Test-Path -LiteralPath $exe)) {
-    if (-not (Test-Path -LiteralPath $exe)) {
-        Write-Host "release 产物不存在，开始构建：$exe"
+$needsBuild = -not (Test-Path -LiteralPath $exe)
+
+if ($needsBuild) {
+    Write-Host "release 产物不存在，开始构建：$exe"
+} else {
+    $newest = Get-NewestSource
+    $stale = $newest -and $newest.LastWriteTime -gt (Get-Item -LiteralPath $exe).LastWriteTime
+    if ($stale -and $SkipBuild) {
+        Write-Warning ("-SkipBuild 生效，仍启动旧产物（最近源码改动 {0} {1:HH:mm:ss}）" -f (Split-Path -Leaf $newest.FullName), $newest.LastWriteTime)
+    } elseif ($stale) {
+        Write-Host ("源码比二进制新（{0} {1:MM-dd HH:mm}），先重新构建" -f (Split-Path -Leaf $newest.FullName), $newest.LastWriteTime)
+        $needsBuild = $true
     }
+}
+
+if ($Rebuild -or $needsBuild) {
     Build-Release
 }
 
@@ -81,18 +115,21 @@ if ($Check) {
     exit $LASTEXITCODE
 }
 
-# 源码比二进制新时提醒一句，避免对着旧代码找问题
-$exeTime = (Get-Item -LiteralPath $exe).LastWriteTime
-$newest = Get-ChildItem (Join-Path $root 'src'), (Join-Path $root 'src-tauri\src') -Recurse -File |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if ($newest -and $newest.LastWriteTime -gt $exeTime) {
-    Write-Warning ("源码比二进制新（最近改动 {0} {1:HH:mm:ss}），要看最新效果请加 -Rebuild" -f (Split-Path -Leaf $newest.FullName), $newest.LastWriteTime)
-}
-
-$running = Get-Process notecalc -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }
+$running = @(Get-Process notecalc -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 })
 if ($running) {
-    Write-Host ("noteCalc 已经在运行（PID {0}），不再重复启动。" -f ($running | Select-Object -First 1).Id)
-    exit 0
+    Write-Host ("noteCalc 已经在运行（PID {0}）。" -f $running[0].Id)
+    if (-not (Read-Yes -Prompt '关掉它并用最新版本重新启动？[Y/n]' -Default $true)) {
+        Write-Host '保持现有窗口，未重新启动。'
+        exit 0
+    }
+    $running | ForEach-Object { $null = $_.CloseMainWindow() }
+    $deadline = (Get-Date).AddSeconds(5)
+    while ((Get-Date) -lt $deadline -and @(Get-Process notecalc -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }).Count -gt 0) {
+        Start-Sleep -Milliseconds 200
+    }
+    Get-Process notecalc -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 } |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Milliseconds 400
 }
 
 Start-Process -FilePath $exe

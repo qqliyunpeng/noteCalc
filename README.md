@@ -13,23 +13,34 @@
 
 ```bash
 pnpm install
-pnpm start                     # 启动 release 版（产物不存在会自动构建）
+pnpm start                     # 启动 release 版（产物不存在或源码有更新会自动构建）
 pnpm tauri dev                 # 开发模式（自动拉起 Vite，端口 1420，改代码即时生效）
+pnpm dev --open                # 只调界面：浏览器开 1420，完全不编译 Rust
 pnpm tauri build               # 发布构建（MSI / NSIS 安装包，产物在 src-tauri/target/release/bundle）
 pnpm tauri build --no-bundle   # 只出可执行文件，跳过安装包封装
 ```
 
-根目录的 `run.bat` 是给双击用的包装（内部还是调 `scripts\run.ps1`），参数直接透传：`run.bat`、
-`run.bat -Check`、`run.bat -Rebuild`。
+根目录的 `run.bat` 是给双击用的包装（内部还是调 `scripts\run.ps1`）。双击传不了参数，所以它自己
+判断：产物不存在、或 `src\`、`src-tauri\src\` 下有文件比产物新，就先 `pnpm tauri build` 再启动，
+双击就能拿到最新版，不用记 `-Rebuild`。要额外开关仍可带参数：`run.bat -Check`、`run.bat -Rebuild`、
+`run.bat -Dev`、`run.bat -SkipBuild`。
 
-`scripts\run.ps1` 就是 `pnpm start` 背后的脚本，另有三个开关：`-Rebuild`（先重新构建再启动）、
-`-Dev`（等价于 `pnpm tauri dev`）、`-Check`（只跑计算引擎自检，不开窗口，退出码 0 表示 30 项全过）。
+`scripts\run.ps1` 就是 `pnpm start` 背后的脚本，开关有：`-Rebuild`（无条件先重新构建再启动）、
+`-Dev`（等价于 `pnpm tauri dev`）、`-Check`（只跑计算引擎自检，不开窗口，退出码 0 表示 39 项全过）、
+`-SkipBuild`（跳过自动构建，直接用现有产物）。注意 `-Check` 也会先补一次构建，自检跑的始终是最新代码；
+旧版本窗口还开着时，脚本会问一句要不要关掉重开。
 
-只调界面时不启动 Rust 也可以：
+只改界面、想马上看效果时可以完全不编译，根目录另有两个双击入口：
 
-```bash
-pnpm dev                       # 浏览器打开 http://localhost:1420
-```
+- `preview.bat` — 等价 `pnpm dev`，在浏览器里打开 http://localhost:1420，纯前端预览；计算结果是内置
+  演示数据、不能打开/保存文件（界面会显示「预览」），但样式和布局改完即时生效。
+- `dev.bat` — 等价 `pnpm tauri dev`，开真正的调试版窗口（真引擎、真标题栏）；改前端走 Vite 热更新
+  不编译，只有改 Rust 才会增量编译 debug 版，比 release 快得多。
+- `run.bat` — 跑 release 版，需要时自动构建，验收最终效果用这个。
+
+`preview.bat` 和 `dev.bat` 都靠那个黑窗口活着，关掉窗口就等于停止。两者都占 1420 端口
+（`vite.config.ts` 里 `strictPort`），别同时开；`preview.bat` 发现端口已被占用时不报错，只帮你把
+浏览器打开。
 
 浏览器里没有 Tauri 运行时，标题栏会显示“浏览器预览”标签，结果来自 `src/lib/demo.ts` 的
 少量示例数据（不做真实计算），文件相关的命令不可用；其余界面、徽标、对齐与交互都能预览。
@@ -108,7 +119,7 @@ pnpm tauri build --target aarch64-apple-darwin --bundles app,dmg     # macOS
 src-tauri\target\debug\notecalc.exe --check
 ```
 
-会打印 30 项结果并以退出码表示成败。之所以不用 `cargo test`：本机 MinGW 工具链无法链接
+会打印 39 项结果并以退出码表示成败。之所以不用 `cargo test`：本机 MinGW 工具链无法链接
 测试目标（`STATUS_ENTRYPOINT_NOT_FOUND`），因此改用程序自身的 `--check` 分支。
 
 ## Windows 链接器注意事项
@@ -136,8 +147,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
 
 ## 功能
 
-- 四则运算、括号、乘方和百分比
-- `[]`、`{}` 或带逗号的 `()` 创建数组，支持逐元素四则运算、百分比、函数与单位换算
+- 四则运算、括号、乘方和百分比；`0x2D0`、`0b1010` 十六进制 / 二进制字面量
+- `[]`、`{}`、`()` 与 `""`、`''` 都能写数组，元素用逗号或空格分隔、允许一个结尾逗号，
+  所以 `{123, 567, 100}`、`{123, 567, 100,}`、`{123 567 100}` 等价；支持逐元素四则运算、
+  百分比、函数与单位换算
 - 数组表达式可跨行书写，结果显示在闭合括号所在行；续行期间遇到空行会取消本次多行表达式
 - 中文/英文变量与顺序引用；行内多赋值（逗号 / 分号 / 全角分隔符）
 - 数学函数与常量、长度/重量/面积/体积/温度/时间单位换算、等式正确性校验
@@ -153,8 +166,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
 - 类 Notepad++ 多文件标签：标签显示文件名与未保存状态，关闭有修改的标签会提示保存/丢弃/取消
 - 打开文件支持多选，打开/保存/另存为/导出带结果的纯文本
 - 自动恢复上次的全部标签、活动标签、未保存内容、窗口几何与显示设置
-- 深色/浅色主题，可调整显示精度与结果间距（字符数）；“编辑”菜单可分别启用整数结果的十六进制和二进制徽标，
-  单击对应徽标即复制该进制值
+- 深色/浅色主题，可调整显示精度与结果间距（字符数）；“编辑”菜单可分别启用整数结果的十六进制和
+  二进制徽标（整数数组按元素逐个给出、保留方括号），单击对应徽标即复制该进制值
 - 自绘标题栏（`decorations: false`）跟随窗口焦点与系统配色：accent 一律取自系统（Windows 读注册表
   `ColorPrevalence` / `AccentColor`，macOS 读 `AppleHighlightColor`，Linux 读 GNOME `accent-color`
   / KDE `AccentColor`），用于描边；只有 Windows 打开“在标题栏和窗口边框上显示强调色”时才像原生窗口
@@ -221,6 +234,8 @@ src-tauri/src/
 ## 与原 Python 版的差异
 
 - 计算引擎在 Rust，前端不参与运算；`--check` 取代 `python -m unittest`
+- 数组字面量比原版宽松：引号与括号等价，空格也能分隔元素，各分隔符都允许一个结尾逗号；
+  另外补上了 `0b` 二进制字面量，以及整数数组的十六进制 / 二进制徽标（原版只给单个整数）
 - 文件对话框与磁盘读写都在 Rust 侧完成（原版直接调用 Qt 的对话框）
 - 浏览器预览是新增的调试通道，用示例结果占位
 - 显示设置（进制徽标、结果框强度、小数位、主题）在原版只在关闭时写盘，这里改动后会立即
