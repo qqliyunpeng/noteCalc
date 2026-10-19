@@ -7,6 +7,8 @@
 mod calc;
 mod metrics;
 mod session;
+#[cfg(windows)]
+mod shortcuts;
 mod theme;
 
 use std::path::{Path, PathBuf};
@@ -262,6 +264,8 @@ pub fn run() {
             let handle = app.handle().clone();
             apply_window_geometry(&handle);
             if let Some(window) = handle.get_webview_window("main") {
+                #[cfg(windows)]
+                shortcuts::suppress_webview_ctrl_j(&window);
                 let _ = window.show();
                 let _ = window.set_focus();
             }
