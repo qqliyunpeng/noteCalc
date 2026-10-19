@@ -51,9 +51,9 @@ pnpm tauri build --no-bundle   # 只出可执行文件，跳过安装包封装
 
 | 产物 | 路径 | 说明 |
 | --- | --- | --- |
-| MSI 安装包 | `src-tauri\target\release\bundle\msi\noteCalc_0.2.0_x64_zh-CN.msi` | 按机器安装，需要管理员权限，适合批量部署 |
-| NSIS 安装包 | `src-tauri\target\release\bundle\nsis\noteCalc_0.2.0_x64-setup.exe` | 按当前用户安装，不需要管理员，自带卸载程序 |
-| 便携包 | `src-tauri\target\release\bundle\portable\noteCalc_0.2.0_x64-portable.zip` | 解压即用，含 `notecalc.exe` 与 `WebView2Loader.dll` |
+| MSI 安装包 | `src-tauri\target\release\bundle\msi\noteCalc_0.3.0_x64_zh-CN.msi` | 按机器安装，需要管理员权限，适合批量部署 |
+| NSIS 安装包 | `src-tauri\target\release\bundle\nsis\noteCalc_0.3.0_x64-setup.exe` | 按当前用户安装，不需要管理员，自带卸载程序 |
+| 便携包 | `src-tauri\target\release\bundle\portable\noteCalc_0.3.0_x64-portable.zip` | 解压即用，含 `notecalc.exe` 与 `WebView2Loader.dll` |
 
 > `bundle.windows.wix.language` 固定为 `zh-CN`（代码页 936，语言 ID 2052），安装向导因此是中文的。
 > 现在产品名是 ASCII 的 `noteCalc`，改回默认代码页 1252 也不会报 `LGHT0311`；但如果以后把产品名
@@ -79,7 +79,7 @@ pnpm portable                  # 等价于 scripts\make-portable.ps1
 
 `.github/workflows/release.yml` 一次跑出三个平台的安装包。触发方式二选一：
 
-- 打 tag 推送：`git tag v0.2.0 && git push origin v0.2.0`
+- 打 tag 推送：`git tag v0.3.0 && git push origin v0.3.0`
 - 在 GitHub 的 Actions 页面手动 Run workflow（`workflow_dispatch`）
 
 矩阵里四个任务并行：
@@ -95,7 +95,7 @@ pnpm portable                  # 等价于 scripts\make-portable.ps1
 
 几点注意事项：
 
-- tag 名要与 `src-tauri/tauri.conf.json` 的 `version` 对应（`v__VERSION__`），当前是 `v0.2.0`。
+- tag 名要与 `src-tauri/tauri.conf.json` 的 `version` 对应（`v__VERSION__`），当前是 `v0.3.0`。
 - 首次运行会下载 WiX / NSIS 打包工具，Windows 任务会慢几分钟，属正常现象。
 - macOS 产物未签名、未公证：用户首次打开要右键「打开」，或执行 `xattr -cr /Applications/noteCalc.app`。
   要去掉这一步得配 Apple 开发者证书（`APPLE_CERTIFICATE`、`APPLE_SIGNING_IDENTITY` 等 secrets）。
