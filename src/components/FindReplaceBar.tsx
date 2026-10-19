@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useEditContextMenu } from "./EditContextMenu";
 import { IconClose, IconSearch } from "./Icons";
 import type { EditorHandle } from "./NoteEditor";
 
@@ -29,6 +30,7 @@ export function FindReplaceBar({
   const [replacement, setReplacement] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const findInput = useRef<HTMLInputElement | null>(null);
+  const { onContextMenu, menu: editMenu } = useEditContextMenu();
 
   useEffect(() => {
     const selected = editor()?.selection();
@@ -130,6 +132,7 @@ export function FindReplaceBar({
         className="find-input"
         placeholder="查找"
         value={query}
+        onContextMenu={onContextMenu}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
@@ -146,6 +149,7 @@ export function FindReplaceBar({
           className="find-input replace"
           placeholder="替换为"
           value={replacement}
+          onContextMenu={onContextMenu}
           onChange={(event) => setReplacement(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
@@ -182,6 +186,7 @@ export function FindReplaceBar({
       <button type="button" className="find-close" title="关闭查找栏 (Esc)" onClick={onClose}>
         <IconClose size={12} />
       </button>
+      {editMenu}
     </div>
   );
 }

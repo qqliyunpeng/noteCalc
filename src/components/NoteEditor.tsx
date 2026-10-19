@@ -29,6 +29,7 @@ import {
   type BadgeTone,
   type LineResult,
 } from "../lib/types";
+import { useEditContextMenu } from "./EditContextMenu";
 import { MenuNumberRow } from "./MenuNumberRow";
 
 const PAD_X = 12;
@@ -427,6 +428,13 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     [content, onChange],
   );
 
+  const { openMenu: openEditMenu, menu: editMenu } = useEditContextMenu({
+    // `insertText` keeps the paste on the browser's undo stack and refreshes
+    // the caret through the textarea's input handler.
+    onPaste: (text) => insertText(text),
+    onCommand: updateCaret,
+  });
+
   /**
    * Encloses the selection in the pair the typed character belongs to. The
    * selection itself is kept, so picking another character still replaces the
@@ -567,6 +575,16 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
     };
   }, [menu]);
 
+  useLayoutEffect(() => {
+    const element = menuRef.current;
+    if (!menu || !element) return;
+    // Keep a menu opened near the window edge on screen.
+    const margin = 4;
+    const { width, height } = element.getBoundingClientRect();
+    element.style.left = `${clamp(menu.x, margin, Math.max(margin, window.innerWidth - width - margin))}px`;
+    element.style.top = `${clamp(menu.y, margin, Math.max(margin, window.innerHeight - height - margin))}px`;
+  }, [menu]);
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // `editor_widget.py` accepts a completion with Tab or Right (no modifiers);
     // Tab still indents by a tab stop when there is nothing to accept.
@@ -605,7 +623,10 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
   };
 
   return (
-    <div className="note-editor">
+    <div
+      className="note-editor"
+      onContextMenu={(event) => openEditMenu(event, textareaRef.current)}
+    >
       <div className="gutter" style={{ width: gutterWidth }} aria-hidden="true">
         <div className="gutter-inner" ref={gutterRef}>
           {lines.map((_, position) => (
@@ -678,6 +699,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
                       }}
                       onContextMenu={(event) => {
                         event.preventDefault();
+                        event.stopPropagation();
                         setMenu({ x: event.clientX, y: event.clientY });
                       }}
                     >
@@ -720,7 +742,12 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
         />
       </div>
       {menu ? (
-        <div className="badge-menu" ref={menuRef} style={{ left: menu.x, top: menu.y }}>
+        <div
+          className="context-menu"
+          ref={menuRef}
+          style={{ left: menu.x, top: menu.y }}
+          onContextMenu={(event) => event.stopPropagation()}
+        >
           <button
             type="button"
             className="menu-item"
@@ -783,6 +810,7 @@ export const NoteEditor = forwardRef<EditorHandle, NoteEditorProps>(function Not
           />
         </div>
       ) : null}
+      {editMenu}
     </div>
   );
 });
