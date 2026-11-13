@@ -13,32 +13,6 @@ noteCalc 是一个本地离线的计算笔记桌面应用：像写笔记一样�
 > **参考说明：** 原始交互思路参考在线工具 [NoteCalc](https://tsfullstack.heartstack.space/noteCalc)，
 > 应用名沿用仓库名 `noteCalc`；本项目是独立开发的本地离线实现，与该在线工具的官方无关。
 
-## 运行
-
-从源码运行或构建需要 Node 22、pnpm 与 Rust 1.82+；Windows 还需要 WebView2 运行时
-（Win11 自带，装了新版 Edge 的 Win10 也有）。只运行发布版时不需要 Node 和 Rust。
-Linux / macOS 的系统依赖见 [Tauri prerequisites](https://tauri.app/start/prerequisites/)。
-
-```bash
-pnpm install
-pnpm tauri dev                 # 开发模式（自动拉起 Vite，端口 1420，改代码即时生效）
-pnpm dev --open                # 只调界面：浏览器打开 1420，不编译 Rust
-pnpm tauri build               # 发布构建（可执行文件与安装包）
-pnpm tauri build --no-bundle   # 只出可执行文件，跳过安装包封装
-pnpm start                     # Windows：启动 release 版（缺产物或源码更新时自动构建）
-```
-
-Windows 下根目录还提供三个双击入口：
-
-- `run.bat` — 启动 release 版；产物不存在或源码比产物新时会自动构建，想直接体验发布版用这个。
-- `dev.bat` — 调试版窗口（真引擎、真标题栏）；改前端走热更新，只有改 Rust 才增量编译。
-- `preview.bat` — 浏览器预览，在 http://localhost:1420 打开，不编译 Rust。
-
-`run.bat` 支持 `-Rebuild`、`-Dev`、`-SkipBuild` 开关。`dev.bat` 与 `preview.bat` 都依赖
-命令行窗口，关闭窗口即停止；两者共用 1420 端口，不要同时开。
-浏览器里没有 Tauri 运行时，标题栏会显示“浏览器预览”，计算结果使用内置示例数据，
-不能打开或保存文件，其余界面、徽标、对齐与交互都能预览。
-
 ## 功能
 
 **计算**

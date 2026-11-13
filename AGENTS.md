@@ -23,6 +23,15 @@
   `function_names()` 为准，单位以 `calc/units.rs` 为准；单个笔记上限 2000 行，
   小数位 0–12（默认 4）
 
+## 环境与命令
+
+- Node 22、pnpm、Rust 1.82+；Windows 需要 WebView2 运行时；Linux / macOS 的系统依赖见
+  <https://tauri.app/start/prerequisites/>
+- `pnpm install` 安装前端依赖
+- `pnpm tauri build` 发布构建（exe + 安装包）；`pnpm tauri build --no-bundle` 只出 exe
+- `pnpm start` / `run.bat` 在 Windows 下启动 release 版；产物缺失或源码比产物新时会先自动构建，
+  `run.bat` 另有 `-Rebuild`、`-Dev`、`-SkipBuild`、`-Check` 开关
+
 ## 验证
 
 - 引擎自检：`src-tauri\target\debug\notecalc.exe --check`（40 项，退出码 0 为通过）；
