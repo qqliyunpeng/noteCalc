@@ -86,7 +86,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup-linker.ps1
 - `bundle.windows.wix.language` 固定为 `zh-CN`（代码页 936 / 语言 ID 2052）；产品名现在是 ASCII 的
   `noteCalc`，若改回中文名，必须确认所选语言代码页能覆盖产品名，否则 WiX 报 `LGHT0311`
 - NSIS 为 currentUser 安装（不需要管理员）；MSI 为 perMachine（需要管理员）
-- tag 必须与 `src-tauri/tauri.conf.json` 的 `version` 一致（`v__VERSION__`，当前 `0.3.0`）；
+- tag 必须与 `src-tauri/tauri.conf.json` 的 `version` 一致（`v__VERSION__`，当前 `0.3.1`）；
   工作流同时支持手动 `workflow_dispatch`，产物进草稿 Release
 - Linux 只打 `deb` / `AppImage`（`rpm` 需要 runner 另装 `rpmbuild`，已显式排除）
 - macOS 产物未签名、未公证：首次打开要右键「打开」或 `xattr -cr /Applications/noteCalc.app`；
